@@ -9,7 +9,14 @@ if all_loaders or get_option('loaders').contains('svg') == true
 endif
 
 if all_loaders or get_option('loaders').contains('lottie') == true
-    subdir('external_lottie')
+    if get_option('static') == true
+        subdir('lottie')
+    else
+        subdir('external_lottie')
+        if not png_dep.found()
+            subdir('lottie')
+        endif
+    endif
 endif
 
 if all_loaders or get_option('loaders').contains('png') == true
