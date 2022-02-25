@@ -1150,10 +1150,13 @@ static bool _attrParseSymbolNode(void* data, const char* key, const char* value)
                 }
             }
         }
+        symbol->hasViewBox = true;
     } else if (!strcmp(key, "width")) {
         symbol->w = _toFloat(loader->svgParse, value, SvgParserLengthType::Horizontal);
+        symbol->hasWidth = true;
     } else if (!strcmp(key, "height")) {
         symbol->h = _toFloat(loader->svgParse, value, SvgParserLengthType::Vertical);
+        symbol->hasHeight = true;
     } else if (!strcmp(key, "preserveAspectRatio")) {
         if (!strcmp(value, "none")) symbol->preserveAspect = false;
     } else if (!strcmp(key, "overflow")) {
@@ -1310,7 +1313,11 @@ static SvgNode* _createSymbolNode(SvgLoaderData* loader, SvgNode* parent, const 
     loader->svgParse->node->display = false;
     loader->svgParse->node->node.symbol.preserveAspect = true;
     loader->svgParse->node->node.symbol.overflowVisible = false;
-
+    loader->svgParse->node->node.symbol.hasViewBox = false;
+    loader->svgParse->node->node.symbol.hasWidth = false;
+    loader->svgParse->node->node.symbol.hasHeight = false;
+    loader->svgParse->node->node.symbol.vx = 0.0f;
+    loader->svgParse->node->node.symbol.vy = 0.0f;
     func(buf, bufLength, _attrParseSymbolNode, loader);
 
     return loader->svgParse->node;
