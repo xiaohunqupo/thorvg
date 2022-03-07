@@ -1143,14 +1143,8 @@ static bool _attrParseSymbolNode(void* data, const char* key, const char* value)
     SvgSymbolNode* symbol = &(node->node.symbol);
 
     if (!strcmp(key, "viewBox")) {
-        if (_parseNumber(&value, &symbol->vx)) {
-            if (_parseNumber(&value, &symbol->vy)) {
-                if (_parseNumber(&value, &symbol->vw)) {
-                    _parseNumber(&value, &symbol->vh);
-                }
-            }
-        }
-        symbol->hasViewBox = true;
+        if (!_parseNumber(&value, &symbol->vx) || !_parseNumber(&value, &symbol->vy)) return false;
+        if (!_parseNumber(&value, &symbol->vw) || !_parseNumber(&value, &symbol->vh)) return false;
     } else if (!strcmp(key, "width")) {
         symbol->w = _toFloat(loader->svgParse, value, SvgParserLengthType::Horizontal);
         symbol->hasWidth = true;
@@ -2111,10 +2105,10 @@ static constexpr struct
     int sz;
     size_t offset;
 } useTags[] = {
-    {"x", SvgParserLengthType::Horizontal, sizeof("x"), offsetof(SvgRectNode, x)},
-    {"y", SvgParserLengthType::Vertical, sizeof("y"), offsetof(SvgRectNode, y)},
-    {"width", SvgParserLengthType::Horizontal, sizeof("width"), offsetof(SvgRectNode, w)},
-    {"height", SvgParserLengthType::Vertical, sizeof("height"), offsetof(SvgRectNode, h)}
+    {"x", SvgParserLengthType::Horizontal, sizeof("x"), offsetof(SvgUseNode, x)},
+    {"y", SvgParserLengthType::Vertical, sizeof("y"), offsetof(SvgUseNode, y)},
+    {"width", SvgParserLengthType::Horizontal, sizeof("width"), offsetof(SvgUseNode, w)},
+    {"height", SvgParserLengthType::Vertical, sizeof("height"), offsetof(SvgUseNode, h)}
 };
 
 
@@ -2131,8 +2125,8 @@ static bool _attrParseUseNode(void* data, const char* key, const char* value)
         if (useTags[i].sz - 1 == sz && !strncmp(useTags[i].tag, key, sz)) {
             *((float*)(array + useTags[i].offset)) = _toFloat(loader->svgParse, value, useTags[i].type);
 
-            if (useTags[i].offset == offsetof(SvgRectNode, w)) use->isWidthSet = true;
-            else if (useTags[i].offset == offsetof(SvgRectNode, h)) use->isHeightSet = true;
+            if (useTags[i].offset == offsetof(SvgUseNode, w)) use->isWidthSet = true;
+            else if (useTags[i].offset == offsetof(SvgUseNode, h)) use->isHeightSet = true;
 
             return true;
         }

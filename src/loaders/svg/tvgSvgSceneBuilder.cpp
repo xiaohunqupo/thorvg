@@ -575,29 +575,25 @@ static unique_ptr<Scene> _useBuildHelper(const SvgNode* node, const Box& vBox, c
 
     if (node->node.use.symbol) {
         auto symbol = node->node.use.symbol->node.symbol;
-
-        auto width = (symbol.hasWidth ? symbol.w : vBox.w);
+        auto width = symbol.w;
         if (node->node.use.isWidthSet) width = node->node.use.w;
-        auto height = (symbol.hasHeight ? symbol.h : vBox.h);
+        auto height = symbol.h;
         if (node->node.use.isHeightSet) height = node->node.use.h;
-        auto vw = (symbol.hasViewBox ? symbol.vw : width);
-        auto vh = (symbol.hasViewBox ? symbol.vh : height);
 
         Matrix mViewBox = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-        if ((!mathEqual(width, vw) || !mathEqual(height, vh)) && vw > 0 && vh > 0) {
-            auto sx = width / vw;
-            auto sy = height / vh;
+        if ((!mathEqual(width, symbol.vw) || !mathEqual(height, symbol.vh)) && symbol.vw > 0 && symbol.vh > 0) {
+            auto sx = width / symbol.vw;
+            auto sy = height / symbol.vh;
             if (symbol.preserveAspect) {
                 if (sx < sy) sy = sx;
                 else sx = sy;
             }
-
             auto tvx = symbol.vx * sx;
             auto tvy = symbol.vy * sy;
-            auto tvw = vw * sx;
-            auto tvh = vh * sy;
-            if (tvw > tvh) tvy -= (height - tvh) * 0.5f;
-            else tvx -= (width - tvw) * 0.5f;
+            auto tvw = symbol.vw * sx;
+            auto tvh = symbol.vh * sy;
+            tvy -= (symbol.h - tvh) * 0.5f;
+            tvx -= (symbol.w - tvw) * 0.5f;
             mViewBox = {sx, 0, -tvx, 0, sy, -tvy, 0, 0, 1};
         } else if (!mathZero(symbol.vx) || !mathZero(symbol.vy)) {
             mViewBox = {1, 0, -symbol.vx, 0, 1, -symbol.vy, 0, 0, 1};
@@ -633,8 +629,8 @@ static unique_ptr<Scene> _useBuildHelper(const SvgNode* node, const Box& vBox, c
 
             finalScene = move(root);
         }
-    } else if (node->node.use.x != 0.0f || node->node.use.y != 0.0f) {
-        scene->transform(mUseTransform);
+    } else {
+        if (!mathIdentity((const Matrix*)(&mUseTransform))) scene->transform(mUseTransform);
         finalScene = move(scene);
     }
 
@@ -708,17 +704,13 @@ unique_ptr<Scene> svgSceneBuild(SvgNode* node, float vx, float vy, float vw, flo
             auto tvy = vy * scale;
             auto tvw = vw * scale;
             auto tvh = vh * scale;
-            if (vw > vh) tvy -= (h - tvh) * 0.5f;
-            else  tvx -= (w - tvw) * 0.5f;
+            tvx -= (w - tvw) * 0.5f;
+            tvy -= (h - tvh) * 0.5f;
             docNode->translate(-tvx, -tvy);
         } else {
             //Align
             auto tvx = vx * sx;
             auto tvy = vy * sy;
-            auto tvw = vw * sx;
-            auto tvh = vh * sy;
-            if (tvw > tvh) tvy -= (h - tvh) * 0.5f;
-            else tvx -= (w - tvw) * 0.5f;
             Matrix m = {sx, 0, -tvx, 0, sy, -tvy, 0, 0, 1};
             docNode->transform(m);
         }
