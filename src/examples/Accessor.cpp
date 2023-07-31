@@ -45,19 +45,20 @@ void tvgDrawCmds(tvg::Canvas* canvas)
         if (paint->identifier() == tvg::Shape::identifier()) {
             auto shape = (tvg::Shape*) paint;
             //override color?
-            uint8_t r, g, b, a;
-            shape->fillColor(&r, &g, &b, &a);
+            uint8_t r, g, b;
+            shape->fillColor(&r, &g, &b);
             if (r == 255 && g == 180 && b == 0)
-                shape->fill(0, 0, 255, a);
+                shape->fill(0, 0, 255);
+
         }
 
         //You can return false, to stop traversing immediately.
         return true;
     };
 
-    picture = accessor->set(move(picture), f);
+    picture = accessor->set(std::move(picture), f);
 
-    canvas->push(move(picture));
+    canvas->push(std::move(picture));
 }
 
 

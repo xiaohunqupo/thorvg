@@ -27,22 +27,6 @@
 using namespace tvg;
 
 
-TEST_CASE("Memory Reservation", "[tvgSwCanvasBase]")
-{
-    REQUIRE(Initializer::init(CanvasEngine::Sw, 0) == Result::Success);
-
-    auto canvas = SwCanvas::gen();
-    REQUIRE(canvas);
-
-    //Check Growth / Reduction
-    REQUIRE(canvas->reserve(10) == Result::Success);
-    REQUIRE(canvas->reserve(1000) == Result::Success);
-    REQUIRE(canvas->reserve(100) == Result::Success);
-    REQUIRE(canvas->reserve(0) == Result::Success);
-
-    REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
-}
-
 TEST_CASE("Pushing Paints", "[tvgSwCanvasBase]")
 {
     REQUIRE(Initializer::init(CanvasEngine::Sw, 0) == Result::Success);
@@ -66,19 +50,35 @@ TEST_CASE("Pushing Paints", "[tvgSwCanvasBase]")
 
     REQUIRE(canvas->clear() == Result::Success);
 
-    REQUIRE(canvas->push(Shape::gen()) == Result::Success);
+    Paint* paints[2];
+    
+    auto p1 = Shape::gen();
+    paints[0] = p1.get();
+    REQUIRE(canvas->push(std::move(p1)) == Result::Success);
 
     //Negative case 1
     REQUIRE(canvas->push(nullptr) == Result::MemoryCorruption);
 
     //Negative case 2
     std::unique_ptr<Shape> shape6 = nullptr;
-    REQUIRE(canvas->push(move(shape6)) == Result::MemoryCorruption);
+    REQUIRE(canvas->push(std::move(shape6)) == Result::MemoryCorruption);
+
+    auto p2 = Shape::gen();
+    paints[1] = p2.get();
+    REQUIRE(canvas->push(std::move(p2)) == Result::Success);
+    REQUIRE(canvas->draw() == Result::Success);
 
     //Negative case 3
-    REQUIRE(canvas->push(Shape::gen()) == Result::Success);
-    REQUIRE(canvas->draw() == Result::Success);
     REQUIRE(canvas->push(Shape::gen()) == Result::InsufficientCondition);
+
+    //Check list of paints
+    auto list = canvas->paints();
+    REQUIRE(list.size() == 2);
+    int idx = 0;
+    for (auto paint : list) {
+       REQUIRE(paints[idx] == paint);
+       ++idx;
+    }
 
     REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
 }
@@ -111,7 +111,7 @@ TEST_CASE("Clear", "[tvgSwCanvasBase]")
         REQUIRE(shape2);
         ptrs[i] = shape2.get();
 
-        REQUIRE(canvas2->push(move(shape2)) == Result::Success);
+        REQUIRE(canvas2->push(std::move(shape2)) == Result::Success);
     }
 
     REQUIRE(canvas->clear() == Result::Success);
@@ -130,7 +130,7 @@ TEST_CASE("Clear", "[tvgSwCanvasBase]")
         REQUIRE(shape2);
         ptrs[i] = shape2.get();
 
-        REQUIRE(canvas2->push(move(shape2)) == Result::Success);
+        REQUIRE(canvas2->push(std::move(shape2)) == Result::Success);
     }
 
     REQUIRE(canvas->update() == Result::Success);
@@ -166,7 +166,7 @@ TEST_CASE("Update", "[tvgSwCanvasBase]")
 
     //Normal case
     auto ptr = shape.get();
-    REQUIRE(canvas->push(move(shape)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape)) == Result::Success);
     REQUIRE(canvas->update(ptr) == Result::Success);
     REQUIRE(canvas->update() == Result::Success);
     REQUIRE(canvas->draw() == Result::Success);
@@ -199,7 +199,7 @@ TEST_CASE("Synchronized Drawing", "[tvgSwCanvasBase]")
     //Invalid Shape
     auto shape = Shape::gen();
     REQUIRE(shape);
-    REQUIRE(canvas->push(move(shape)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape)) == Result::Success);
 
     REQUIRE(canvas->draw() == Result::Success);
     REQUIRE(canvas->sync() == Result::Success);
@@ -207,10 +207,10 @@ TEST_CASE("Synchronized Drawing", "[tvgSwCanvasBase]")
 
     auto shape2 = Shape::gen();
     REQUIRE(shape2);
-    REQUIRE(shape2->appendRect(0, 0, 100, 100, 0, 0) == Result::Success);
+    REQUIRE(shape2->appendRect(0, 0, 100, 100) == Result::Success);
     REQUIRE(shape2->fill(255, 255, 255, 255) == Result::Success);
 
-    REQUIRE(canvas->push(move(shape2)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape2)) == Result::Success);
     REQUIRE(canvas->draw() == Result::Success);
     REQUIRE(canvas->sync() == Result::Success);
 
@@ -231,10 +231,10 @@ TEST_CASE("Asynchronized Drawing", "[tvgSwCanvasBase]")
     for (int i = 0; i < 3; ++i) {
         auto shape = Shape::gen();
         REQUIRE(shape);
-        REQUIRE(shape->appendRect(0, 0, 100, 100, 0, 0) == Result::Success);
+        REQUIRE(shape->appendRect(0, 0, 100, 100) == Result::Success);
         REQUIRE(shape->fill(255, 255, 255, 255) == Result::Success);
 
-        REQUIRE(canvas->push(move(shape)) == Result::Success);
+        REQUIRE(canvas->push(std::move(shape)) == Result::Success);
     }
 
     REQUIRE(canvas->draw() == Result::Success);

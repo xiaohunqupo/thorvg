@@ -28,6 +28,12 @@ TEST_CASE("Basic Create", "[capiRadialGradient]")
 {
     Tvg_Gradient *gradient = tvg_radial_gradient_new();
     REQUIRE(gradient);
+
+    Tvg_Identifier id = TVG_IDENTIFIER_UNDEF;
+    REQUIRE(tvg_gradient_get_identifier(gradient, &id) == TVG_RESULT_SUCCESS);
+    REQUIRE(id == TVG_IDENTIFIER_RADIAL_GRAD);
+    REQUIRE(id != TVG_IDENTIFIER_LINEAR_GRAD);
+
     REQUIRE(tvg_gradient_del(gradient) == TVG_RESULT_SUCCESS);
 }
 
@@ -117,7 +123,7 @@ TEST_CASE("Clear gradient data", "[capiRadialGradient]")
 
     REQUIRE(tvg_gradient_set_color_stops(gradient, NULL, 0) == TVG_RESULT_SUCCESS);
     REQUIRE(tvg_gradient_get_color_stops(gradient, &color_stops_ret, &color_stops_count_ret) == TVG_RESULT_SUCCESS);
-    REQUIRE(color_stops_ret == NULL);
+    REQUIRE(color_stops_ret == nullptr);
     REQUIRE(color_stops_count_ret == 0);
 
     REQUIRE(tvg_gradient_del(gradient) == TVG_RESULT_SUCCESS);

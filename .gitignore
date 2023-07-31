@@ -1,6 +1,9 @@
 build
 builddir
-.vscode
-*.swp
 doc
-capi_test.tvg
+.vscode
+.idea
+*.swp
+*.tvg
+*.tmp
+*.code-workspace

@@ -94,8 +94,8 @@ float svgUtilStrtof(const char *nPtr, char **endPtr)
         if ((tolower(*(iter + 1)) == 'n') && (tolower(*(iter + 2)) == 'f')) iter += 3;
         else goto error;
 
-        if (tolower(*(iter + 3)) == 'i') {
-            if ((tolower(*(iter + 4)) == 'n') && (tolower(*(iter + 5)) == 'i') && (tolower(*(iter + 6)) == 't') && (tolower(*(iter + 7)) == 'y')) iter += 5;
+        if (tolower(*(iter)) == 'i') {
+            if ((tolower(*(iter + 1)) == 'n') && (tolower(*(iter + 2)) == 'i') && (tolower(*(iter + 3)) == 't') && (tolower(*(iter + 4)) == 'y')) iter += 5;
             else goto error;
         }
         if (endPtr) *endPtr = (char *)(iter);
@@ -274,4 +274,17 @@ string svgUtilBase64Decode(const char *src)
         src += 4;
     }
     return decoded;
+}
+
+
+char* svgUtilStrndup(const char* str, size_t n)
+{
+    auto len = strlen(str);
+    if (len < n) n = len;
+
+    auto ret = (char*)malloc(n + 1);
+    if (!ret) return nullptr;
+    ret[n] = '\0';
+
+    return (char*)memcpy(ret, str, n);
 }

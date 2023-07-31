@@ -33,9 +33,9 @@ void tvgDrawCmds(tvg::Canvas* canvas)
 
     //Background
     auto bg = tvg::Shape::gen();
-    bg->appendRect(0, 0, WIDTH, HEIGHT, 0, 0);    //x, y, w, h, rx, ry
-    bg->fill(255, 255, 255, 255);                 //r, g, b, a
-    canvas->push(move(bg));
+    bg->appendRect(0, 0, WIDTH, HEIGHT);    //x, y, w, h
+    bg->fill(255, 255, 255);                //r, g, b
+    canvas->push(std::move(bg));
 
     //Load png file from path
     auto opacity = 31;
@@ -50,7 +50,7 @@ void tvgDrawCmds(tvg::Canvas* canvas)
         picture->rotate(30 * i);
         picture->size(200, 200);
         picture->opacity(opacity + opacity * i);
-        if (canvas->push(move(picture)) != tvg::Result::Success) return;
+        if (canvas->push(std::move(picture)) != tvg::Result::Success) return;
     }
 
     //Open file manually
@@ -74,7 +74,7 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     free(data);
     picture->translate(400, 0);
     picture->scale(0.8);
-    canvas->push(move(picture));
+    canvas->push(std::move(picture));
 }
 
 

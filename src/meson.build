@@ -1,5 +1,14 @@
-compiler_flags = ['-DTVG_BUILD']
+compiler_flags = []
 override_options = []
+
+lib_type = get_option('default_library')
+
+if (lib_type == 'shared')
+    compiler_flags += ['-DTVG_EXPORT', '-DTVG_BUILD']
+else
+    compiler_flags += ['-DTVG_STATIC']
+endif
+
 cc = meson.get_compiler('cpp')
 if (cc.get_id() == 'clang-cl')
     if simd_type == 'avx'
@@ -21,7 +30,7 @@ elif (cc.get_id() != 'msvc')
         compiler_flags += ['-mfpu=neon']
     endif
     if get_option('b_sanitize') == 'none'
-        compiler_flags += ['-s', '-fno-exceptions', '-fno-rtti', '-fno-stack-protector', '-fno-math-errno',
+        compiler_flags += ['-fno-exceptions', '-fno-rtti', '-fno-stack-protector', '-fno-math-errno',
                            '-fno-unwind-tables' , '-fno-asynchronous-unwind-tables',
                            '-Woverloaded-virtual', '-Wno-unused-parameter']
     endif
@@ -48,11 +57,6 @@ thorvg_lib = library(
     cpp_args               : compiler_flags,
     gnu_symbol_visibility  : 'hidden',
     override_options       : override_options
-)
-
-thorvg_dep = declare_dependency(
-    include_directories: headers,
-    link_with : thorvg_lib
 )
 
 if (cc.get_id() == 'emscripten')

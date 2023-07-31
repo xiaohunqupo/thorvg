@@ -62,7 +62,9 @@ using namespace tvg;
 #define TVG_CLASS_ID_LINEAR    4
 #define TVG_CLASS_ID_RADIAL    5
 
-enum class FileType { Tvg = 0, Svg, Raw, Png, Jpg, Unknown };
+enum class FileType { Tvg = 0, Svg, Lottie, Raw, Png, Jpg, Webp, Unknown };
+
+using Size = Point;
 
 #ifdef THORVG_LOG_ENABLED
     constexpr auto ErrorColor = "\033[31m";  //red
@@ -71,8 +73,8 @@ enum class FileType { Tvg = 0, Svg, Raw, Png, Jpg, Unknown };
     constexpr auto LogBgColor = "\033[42m";  //bg green
     constexpr auto GreyColor = "\033[90m";   //grey
     constexpr auto ResetColors = "\033[0m";  //default
-    #define TVGERR(tag, fmt, ...) fprintf(stderr, "%s[E]%s %s" tag "%s (%s l.%d): %s" fmt "\n", ErrorBgColor, ResetColors, ErrorColor, GreyColor, __FILE__, __LINE__, ResetColors, ##__VA_ARGS__)
-    #define TVGLOG(tag, fmt, ...) fprintf(stderr, "%s[L]%s %s" tag "%s (%s l.%d): %s" fmt "\n", LogBgColor, ResetColors, LogColor, GreyColor, __FILE__, __LINE__, ResetColors, ##__VA_ARGS__)
+    #define TVGERR(tag, fmt, ...) fprintf(stderr, "%s[E]%s %s" tag "%s (%s %d): %s" fmt "\n", ErrorBgColor, ResetColors, ErrorColor, GreyColor, __FILE__, __LINE__, ResetColors, ##__VA_ARGS__)
+    #define TVGLOG(tag, fmt, ...) fprintf(stdout, "%s[L]%s %s" tag "%s (%s %d): %s" fmt "\n", LogBgColor, ResetColors, LogColor, GreyColor, __FILE__, __LINE__, ResetColors, ##__VA_ARGS__)
 #else
     #define TVGERR(...)
     #define TVGLOG(...)

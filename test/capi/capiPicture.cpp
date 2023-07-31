@@ -31,6 +31,12 @@ TEST_CASE("Load Raw file in Picture", "[capiPicture]")
     Tvg_Paint* picture = tvg_picture_new();
     REQUIRE(picture);
 
+    Tvg_Identifier id = TVG_IDENTIFIER_UNDEF;
+    REQUIRE(tvg_paint_get_identifier(picture, &id) == TVG_RESULT_SUCCESS);
+    REQUIRE(id == TVG_IDENTIFIER_PICTURE);
+    REQUIRE(id != TVG_IDENTIFIER_SHAPE);
+    REQUIRE(id != TVG_IDENTIFIER_SCENE);
+
     //Load Raw Data
     FILE* fp = fopen(TEST_DIR"/rawimage_200x300.raw", "r");
     if (!fp) return;
@@ -117,15 +123,6 @@ TEST_CASE("Load Svg Data in Picture", "[capiPicture]")
     REQUIRE(w == Approx(wNew).epsilon(0.0000001));
     REQUIRE(h == Approx(hNew).epsilon(0.0000001));
 
-
-    //Verify Position
-    float x, y;
-    REQUIRE(tvg_picture_get_viewbox(picture, &x, &y, &w, &h) == TVG_RESULT_SUCCESS);
-    REQUIRE(x == Approx(0).epsilon(0.0000001));
-    REQUIRE(y == Approx(0).epsilon(0.0000001));
-    REQUIRE(w == Approx(600).epsilon(0.0000001));
-    REQUIRE(h == Approx(600).epsilon(0.0000001));
-
     REQUIRE(tvg_paint_del(picture) == TVG_RESULT_SUCCESS);
 }
 
@@ -195,6 +192,32 @@ TEST_CASE("Load Tvg file in Picture", "[capiPicture]")
 
     //Load Png file
     REQUIRE(tvg_picture_load(picture, TEST_DIR"/test.tvg") == TVG_RESULT_SUCCESS);
+
+    //Verify Size
+    float wNew = 500.0f, hNew = 500.0f;
+    float w = 0.0f, h = 0.0f;
+    REQUIRE(tvg_picture_set_size(picture, wNew, hNew) == TVG_RESULT_SUCCESS);
+    REQUIRE(tvg_picture_get_size(picture, &w, &h) == TVG_RESULT_SUCCESS);
+    REQUIRE(w == Approx(wNew).epsilon(0.0000001));
+    REQUIRE(h == Approx(hNew).epsilon(0.0000001));
+
+    REQUIRE(tvg_paint_del(picture) == TVG_RESULT_SUCCESS);
+}
+
+#endif
+
+#ifdef THORVG_WEBP_LOADER_SUPPORT
+
+TEST_CASE("Load Webp file in Picture", "[capiPicture]")
+{
+    Tvg_Paint* picture = tvg_picture_new();
+    REQUIRE(picture);
+
+    //Invalid file
+    REQUIRE(tvg_picture_load(picture, "invalid.webp") == TVG_RESULT_INVALID_ARGUMENT);
+
+    //Load Png file
+    REQUIRE(tvg_picture_load(picture, TEST_DIR"/test.webp") == TVG_RESULT_SUCCESS);
 
     //Verify Size
     float wNew = 500.0f, hNew = 500.0f;

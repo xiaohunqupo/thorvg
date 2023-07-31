@@ -8,6 +8,10 @@ if all_loaders or get_option('loaders').contains('svg') == true
     subdir('svg')
 endif
 
+if get_option('loaders').contains('lottie_beta') == true
+    subdir('lottie')
+endif
+
 if all_loaders or get_option('loaders').contains('png') == true
     if get_option('static') == true
         subdir('png')
@@ -27,6 +31,14 @@ if all_loaders or get_option('loaders').contains('jpg') == true
         if not jpg_dep.found()
             subdir('jpg')
         endif
+    endif
+endif
+
+if get_option('loaders').contains('webp_beta') == true
+    if get_option('static') == true
+        message('static webp is not available, disable webp_beta loader.')
+    else
+        subdir('external_webp')
     endif
 endif
 

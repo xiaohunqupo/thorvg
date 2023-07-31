@@ -34,26 +34,18 @@ static inline bool _onlyShifted(const Matrix* m)
 }
 
 
-static bool _genOutline(SwImage* image, Polygon* triangles, uint32_t triangleCount, const Matrix* transform, SwMpool* mpool, unsigned tid)
+static bool _genOutline(SwImage* image, const RenderMesh* mesh, const Matrix* transform, SwMpool* mpool, unsigned tid)
 {
     image->outline = mpoolReqOutline(mpool, tid);
     auto outline = image->outline;
 
-     if (outline->reservedPtsCnt < 5) {
-        outline->reservedPtsCnt = 5;
-        outline->pts = static_cast<SwPoint*>(realloc(outline->pts, outline->reservedPtsCnt * sizeof(SwPoint)));
-        outline->types = static_cast<uint8_t*>(realloc(outline->types, outline->reservedPtsCnt * sizeof(uint8_t)));
-     }
-
-    if (outline->reservedCntrsCnt < 1) {
-        outline->reservedCntrsCnt = 1;
-        outline->cntrs = static_cast<uint32_t*>(realloc(outline->cntrs, outline->reservedCntrsCnt * sizeof(uint32_t)));
-        outline->closed = static_cast<bool*>(realloc(outline->closed, outline->reservedCntrsCnt * sizeof(bool)));
-        outline->closed[0] = true;
-    }
+    outline->pts.reserve(5);
+    outline->types.reserve(5);
+    outline->cntrs.reserve(1);
+    outline->closed.reserve(1);
 
     Point to[4];
-    if (triangleCount > 0) {
+    if (mesh->triangleCnt > 0) {
         // TODO: Optimise me. We appear to calculate this exact min/max bounding area in multiple
         // places. We should be able to re-use one we have already done? Also see:
         //   tvgPictureImpl.h --> bounds
@@ -63,10 +55,11 @@ static bool _genOutline(SwImage* image, Polygon* triangles, uint32_t triangleCou
         // i.e. copy tvgSwShape.capp -> _genOutline?
         //
         // TODO: Cntrs?
-        Point min = { triangles[0].vertex[0].pt.x, triangles[0].vertex[0].pt.y };
-        Point max = { triangles[0].vertex[0].pt.x, triangles[0].vertex[0].pt.y };
+        auto triangles = mesh->triangles;
+        auto min = triangles[0].vertex[0].pt;
+        auto max = triangles[0].vertex[0].pt;
 
-        for (uint32_t i = 0; i < triangleCount; ++i) {
+        for (uint32_t i = 0; i < mesh->triangleCnt; ++i) {
             if (triangles[i].vertex[0].pt.x < min.x) min.x = triangles[i].vertex[0].pt.x;
             else if (triangles[i].vertex[0].pt.x > max.x) max.x = triangles[i].vertex[0].pt.x;
             if (triangles[i].vertex[0].pt.y < min.y) min.y = triangles[i].vertex[0].pt.y;
@@ -82,7 +75,6 @@ static bool _genOutline(SwImage* image, Polygon* triangles, uint32_t triangleCou
             if (triangles[i].vertex[2].pt.y < min.y) min.y = triangles[i].vertex[2].pt.y;
             else if (triangles[i].vertex[2].pt.y > max.y) max.y = triangles[i].vertex[2].pt.y;
         }
-
         to[0] = {min.x, min.y};
         to[1] = {max.x, min.y};
         to[2] = {max.x, max.y};
@@ -95,18 +87,16 @@ static bool _genOutline(SwImage* image, Polygon* triangles, uint32_t triangleCou
         to[2] = {w, h};
         to[3] = {0, h};
     }
+
     for (int i = 0; i < 4; i++) {
-        outline->pts[outline->ptsCnt] = mathTransform(&to[i], transform);
-        outline->types[outline->ptsCnt] = SW_CURVE_TYPE_POINT;
-        ++outline->ptsCnt;
+        outline->pts.push(mathTransform(&to[i], transform));
+        outline->types.push(SW_CURVE_TYPE_POINT);
     }
 
-    outline->pts[outline->ptsCnt] = outline->pts[0];
-    outline->types[outline->ptsCnt] = SW_CURVE_TYPE_POINT;
-    ++outline->ptsCnt;
-
-    outline->cntrs[outline->cntrsCnt] = outline->ptsCnt - 1;
-    ++outline->cntrsCnt;
+    outline->pts.push(outline->pts.data[0]);
+    outline->types.push(SW_CURVE_TYPE_POINT);
+    outline->cntrs.push(outline->pts.count - 1);
+    outline->closed.push(true);
 
     image->outline = outline;
 
@@ -118,7 +108,7 @@ static bool _genOutline(SwImage* image, Polygon* triangles, uint32_t triangleCou
 /* External Class Implementation                                        */
 /************************************************************************/
 
-bool imagePrepare(SwImage* image, Polygon* triangles, uint32_t triangleCount, const Matrix* transform, const SwBBox& clipRegion, SwBBox& renderRegion, SwMpool* mpool, unsigned tid)
+bool imagePrepare(SwImage* image, const RenderMesh* mesh, const Matrix* transform, const SwBBox& clipRegion, SwBBox& renderRegion, SwMpool* mpool, unsigned tid)
 {
     image->direct = _onlyShifted(transform);
 
@@ -136,7 +126,7 @@ bool imagePrepare(SwImage* image, Polygon* triangles, uint32_t triangleCount, co
         else image->scaled = false;
     }
 
-    if (!_genOutline(image, triangles, triangleCount, transform, mpool, tid)) return false;
+    if (!_genOutline(image, mesh, transform, mpool, tid)) return false;
     return mathUpdateOutlineBBox(image->outline, clipRegion, renderRegion, image->direct);
 }
 

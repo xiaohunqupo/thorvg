@@ -122,11 +122,11 @@ TEST_CASE("Bounding Box", "[tvgPaint]")
 
     //Negative
     float x = 0, y = 0, w = 0, h = 0;
-    REQUIRE(shape->bounds(&x, &y, &w, &h) == Result::InsufficientCondition);
+    REQUIRE(shape->bounds(&x, &y, &w, &h, false) == Result::InsufficientCondition);
 
     //Case 1
     REQUIRE(shape->appendRect(0.0f, 10.0f, 20.0f, 100.0f, 50.0f, 50.0f) == Result::Success);
-    REQUIRE(shape->bounds(&x, &y, &w, &h) == Result::Success);
+    REQUIRE(shape->bounds(&x, &y, &w, &h, false) == Result::Success);
     REQUIRE(x == 0.0f);
     REQUIRE(y == 10.0f);
     REQUIRE(w == 20.0f);
@@ -136,7 +136,7 @@ TEST_CASE("Bounding Box", "[tvgPaint]")
     REQUIRE(shape->reset() == Result::Success);
     REQUIRE(shape->moveTo(0.0f, 10.0f) == Result::Success);
     REQUIRE(shape->lineTo(20.0f, 210.0f) == Result::Success);
-    REQUIRE(shape->bounds(&x, &y, &w, &h) == Result::Success);
+    REQUIRE(shape->bounds(&x, &y, &w, &h, false) == Result::Success);
     REQUIRE(x == 0.0f);
     REQUIRE(y == 10.0f);
     REQUIRE(w == 20.0f);
@@ -156,10 +156,10 @@ TEST_CASE("Duplication", "[tvgPaint]")
 
     auto comp = Shape::gen();
     REQUIRE(comp);
-    REQUIRE(shape->composite(move(comp), CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::ClipPath) == Result::Success);
 
     //Duplication
-    auto dup = unique_ptr<Shape>((Shape*)shape->duplicate());
+    auto dup = tvg::cast<Shape>(shape->duplicate());
     REQUIRE(dup);
 
     //Compare properties
@@ -189,12 +189,12 @@ TEST_CASE("Composition", "[tvgPaint]")
 
     auto comp = Shape::gen();
     REQUIRE(shape->composite(nullptr, CompositeMethod::ClipPath) == Result::InvalidArguments);
-    REQUIRE(shape->composite(move(comp), CompositeMethod::None) == Result::InvalidArguments);
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::None) == Result::InvalidArguments);
 
     //ClipPath
     comp = Shape::gen();
     auto pComp = comp.get();
-    REQUIRE(shape->composite(move(comp), CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::ClipPath) == Result::Success);
 
     const Paint* pComp2 = nullptr;
     REQUIRE(shape->composite(&pComp2) == CompositeMethod::ClipPath);
@@ -203,15 +203,93 @@ TEST_CASE("Composition", "[tvgPaint]")
     //AlphaMask
     comp = Shape::gen();
     pComp = comp.get();
-    REQUIRE(shape->composite(move(comp), CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::AlphaMask) == Result::Success);
 
     REQUIRE(shape->composite(&pComp2) == CompositeMethod::AlphaMask);
     REQUIRE(pComp == pComp2);
 
+    //InvAlphaMask
     comp = Shape::gen();
     pComp = comp.get();
-    REQUIRE(shape->composite(move(comp), CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::InvAlphaMask) == Result::Success);
 
     REQUIRE(shape->composite(&pComp2) == CompositeMethod::InvAlphaMask);
     REQUIRE(pComp == pComp2);
+
+    //LumaMask
+    comp = Shape::gen();
+    pComp = comp.get();
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::LumaMask) == Result::Success);
+
+    REQUIRE(shape->composite(&pComp2) == CompositeMethod::LumaMask);
+    REQUIRE(pComp == pComp2);
+
+    //InvLumaMask
+    comp = Shape::gen();
+    pComp = comp.get();
+    REQUIRE(shape->composite(std::move(comp), CompositeMethod::InvLumaMask) == Result::Success);
+
+    REQUIRE(shape->composite(&pComp2) == CompositeMethod::InvLumaMask);
+    REQUIRE(pComp == pComp2);
+}
+
+TEST_CASE("Blending", "[tvgPaint]")
+{
+    auto shape = Shape::gen();
+    REQUIRE(shape);
+
+    //Default
+    REQUIRE(shape->blend() == BlendMethod::Normal);
+
+    //Add
+    REQUIRE(shape->blend(BlendMethod::Add) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Add);
+
+    //Screen
+    REQUIRE(shape->blend(BlendMethod::Screen) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Screen);
+
+    //Multiply
+    REQUIRE(shape->blend(BlendMethod::Multiply) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Multiply);
+
+    //Overlay
+    REQUIRE(shape->blend(BlendMethod::Overlay) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Overlay);
+
+    //Difference
+    REQUIRE(shape->blend(BlendMethod::Difference) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Difference);
+
+    //Exclusion
+    REQUIRE(shape->blend(BlendMethod::Exclusion) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Exclusion);
+
+    //SrcOver
+    REQUIRE(shape->blend(BlendMethod::SrcOver) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::SrcOver);
+
+    //Darken
+    REQUIRE(shape->blend(BlendMethod::Darken) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Darken);
+
+    //Lighten
+    REQUIRE(shape->blend(BlendMethod::Lighten) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::Lighten);
+
+    //ColorDodge
+    REQUIRE(shape->blend(BlendMethod::ColorDodge) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::ColorDodge);
+
+    //ColorBurn
+    REQUIRE(shape->blend(BlendMethod::ColorBurn) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::ColorBurn);
+
+    //HardLight
+    REQUIRE(shape->blend(BlendMethod::HardLight) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::HardLight);
+
+    //SoftLight
+    REQUIRE(shape->blend(BlendMethod::SoftLight) == Result::Success);
+    REQUIRE(shape->blend() == BlendMethod::SoftLight);
 }

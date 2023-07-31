@@ -93,7 +93,7 @@ TEST_CASE("Load RAW file and render", "[tvgPicture]")
     REQUIRE(picture->load(data, 200, 300, false) == Result::Success);
     REQUIRE(picture->size(100, 150) == Result::Success);
 
-    REQUIRE(canvas->push(move(picture)) == Result::Success);
+    REQUIRE(canvas->push(std::move(picture)) == Result::Success);
 
     REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
 
@@ -216,7 +216,7 @@ TEST_CASE("Picture Duplication", "[tvgPicture]")
     REQUIRE(picture->load(data, 200, 300, false) == Result::Success);
     REQUIRE(picture->size(100, 100) == Result::Success);
 
-    auto dup = unique_ptr<Picture>((Picture*)picture->duplicate());
+    auto dup = tvg::cast<Picture>(picture->duplicate());
     REQUIRE(dup);
 
     float w, h;
@@ -252,11 +252,11 @@ TEST_CASE("Load SVG Data", "[tvgPicture]")
     REQUIRE(picture);
 
     //Negative cases
-    REQUIRE(picture->load(nullptr, 100, "") == Result::InvalidArguments);
-    REQUIRE(picture->load(svg, 0, "") == Result::InvalidArguments);
+    REQUIRE(picture->load(nullptr, 100, "", false) == Result::InvalidArguments);
+    REQUIRE(picture->load(svg, 0, "", false) == Result::InvalidArguments);
 
     //Positive cases
-    REQUIRE(picture->load(svg, strlen(svg), "svg") == Result::Success);
+    REQUIRE(picture->load(svg, strlen(svg), "svg", false) == Result::Success);
 
     float w, h;
     REQUIRE(picture->size(&w, &h) == Result::Success);
@@ -282,7 +282,7 @@ TEST_CASE("Load SVG file and render", "[tvgPicture]")
     REQUIRE(picture->load(TEST_DIR"/tag.svg") == Result::Success);
     REQUIRE(picture->size(100, 100) == Result::Success);
 
-    REQUIRE(canvas->push(move(picture)) == Result::Success);
+    REQUIRE(canvas->push(std::move(picture)) == Result::Success);
     REQUIRE(canvas->draw() == Result::Success);
     REQUIRE(canvas->sync() == Result::Success);
 
@@ -353,7 +353,7 @@ TEST_CASE("Load PNG file and render", "[tvgPicture]")
     REQUIRE(picture->opacity(192) == Result::Success);
     REQUIRE(picture->scale(5.0) == Result::Success);
 
-    REQUIRE(canvas->push(move(picture)) == Result::Success);
+    REQUIRE(canvas->push(std::move(picture)) == Result::Success);
 
     REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
 }
@@ -421,7 +421,7 @@ TEST_CASE("Load JPG file and render", "[tvgPicture]")
 
     REQUIRE(picture->load(TEST_DIR"/test.jpg") == Result::Success);
 
-    REQUIRE(canvas->push(move(picture)) == Result::Success);
+    REQUIRE(canvas->push(std::move(picture)) == Result::Success);
 
     REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
 }
@@ -489,16 +489,83 @@ TEST_CASE("Load TVG file and render", "[tvgPicture]")
     auto pictureTag = Picture::gen();
     REQUIRE(pictureTag);
     REQUIRE(pictureTag->load(TEST_DIR"/tag.tvg") == Result::Success);
-    REQUIRE(canvas->push(move(pictureTag)) == Result::Success);
+    REQUIRE(canvas->push(std::move(pictureTag)) == Result::Success);
 
     auto pictureTest = Picture::gen();
     REQUIRE(pictureTest);
     REQUIRE(pictureTest->load(TEST_DIR"/test.tvg") == Result::Success);
-    REQUIRE(canvas->push(move(pictureTest)) == Result::Success);
+    REQUIRE(canvas->push(std::move(pictureTest)) == Result::Success);
 
     REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
 
     delete[] buffer;
+}
+
+#endif
+
+#ifdef THORVG_WEBP_LOADER_SUPPORT
+
+TEST_CASE("Load WEBP file from path", "[tvgPicture]")
+{
+    auto picture = Picture::gen();
+    REQUIRE(picture);
+
+    //Invalid file
+    REQUIRE(picture->load("invalid.webp") == Result::InvalidArguments);
+
+    REQUIRE(picture->load(TEST_DIR"/test.webp") == Result::Success);
+
+    float w, h;
+    REQUIRE(picture->size(&w, &h) == Result::Success);
+
+    REQUIRE(w == 512);
+    REQUIRE(h == 512);
+}
+
+TEST_CASE("Load WEBP file from data", "[tvgPicture]")
+{
+    auto picture = Picture::gen();
+    REQUIRE(picture);
+
+    //Open file
+    ifstream file(TEST_DIR"/test.webp", ios::in | ios::binary);
+    REQUIRE(file.is_open());
+    auto size = sizeof(uint32_t) * (1000*1000);
+    auto data = (char*)malloc(size);
+    file.read(data, size);
+    file.close();
+
+    REQUIRE(picture->load(data, size, "", false) == Result::Success);
+    REQUIRE(picture->load(data, size, "webp", true) == Result::Success);
+
+    float w, h;
+    REQUIRE(picture->size(&w, &h) == Result::Success);
+    REQUIRE(w == 512);
+    REQUIRE(h == 512);
+
+    free(data);
+}
+
+TEST_CASE("Load WEBP file and render", "[tvgPicture]")
+{
+    REQUIRE(Initializer::init(CanvasEngine::Sw, 0) == Result::Success);
+
+    auto canvas = SwCanvas::gen();
+    REQUIRE(canvas);
+
+    uint32_t buffer[100*100];
+    REQUIRE(canvas->target(buffer, 100, 100, 100, SwCanvas::Colorspace::ABGR8888) == Result::Success);
+
+    auto picture = Picture::gen();
+    REQUIRE(picture);
+
+    REQUIRE(picture->load(TEST_DIR"/test.webp") == Result::Success);
+    REQUIRE(picture->opacity(192) == Result::Success);
+    REQUIRE(picture->scale(5.0) == Result::Success);
+
+    REQUIRE(canvas->push(std::move(picture)) == Result::Success);
+
+    REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
 }
 
 #endif

@@ -46,18 +46,17 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     if (!canvas) return;
     //Background
     auto shape = tvg::Shape::gen();
-    shape->appendRect(0, 0, WIDTH, HEIGHT, 0, 0);
-    shape->fill(255, 255, 255, 255);
-    if (canvas->push(move(shape)) != tvg::Result::Success) return;
+    shape->appendRect(0, 0, WIDTH, HEIGHT);
+    shape->fill(255, 255, 255);
+    if (canvas->push(std::move(shape)) != tvg::Result::Success) return;
 
     //////////////////////////////////////////////
     auto scene = tvg::Scene::gen();
-    scene->reserve(2);
 
     auto star1 = tvg::Shape::gen();
     tvgDrawStar(star1.get());
-    star1->fill(255, 255, 0, 255);
-    star1->stroke(255 ,0, 0, 255);
+    star1->fill(255, 255, 0);
+    star1->stroke(255 ,0, 0);
     star1->stroke(10);
 
     //Move Star1
@@ -68,12 +67,12 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     clipStar->appendCircle(200, 230, 110, 110);
     clipStar->translate(10, 10);
 
-    star1->composite(move(clipStar), tvg::CompositeMethod::ClipPath);
+    star1->composite(std::move(clipStar), tvg::CompositeMethod::ClipPath);
 
     auto star2 = tvg::Shape::gen();
     tvgDrawStar(star2.get());
-    star2->fill(0, 255, 255, 255);
-    star2->stroke(0 ,255, 0, 255);
+    star2->fill(0, 255, 255);
+    star2->stroke(0 ,255, 0);
     star2->stroke(10);
     star2->opacity(100);
 
@@ -85,13 +84,13 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     clip->appendCircle(200, 230, 130, 130);
     clip->translate(10, 10);
 
-    scene->push(move(star1));
-    scene->push(move(star2));
+    scene->push(std::move(star1));
+    scene->push(std::move(star2));
 
     //Clipping scene to shape
-    scene->composite(move(clip), tvg::CompositeMethod::ClipPath);
+    scene->composite(std::move(clip), tvg::CompositeMethod::ClipPath);
 
-    canvas->push(move(scene));
+    canvas->push(std::move(scene));
 
     //////////////////////////////////////////////
     auto star3 = tvg::Shape::gen();
@@ -104,21 +103,21 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     colorStops[0] = {0, 0, 0, 0, 255};
     colorStops[1] = {1, 255, 255, 255, 255};
     fill->colorStops(colorStops, 2);
-    star3->fill(move(fill));
+    star3->fill(std::move(fill));
 
-    star3->stroke(255 ,0, 0, 255);
+    star3->stroke(255 ,0, 0);
     star3->stroke(10);
     star3->translate(400, 0);
 
     // color/alpha/opacity are ignored for a clip object - no need to set them
     auto clipRect = tvg::Shape::gen();
-    clipRect->appendRect(500, 120, 200, 200, 0, 0);          //x, y, w, h, rx, ry
+    clipRect->appendRect(500, 120, 200, 200);          //x, y, w, h
     clipRect->translate(20, 20);
 
     //Clipping scene to rect(shape)
-    star3->composite(move(clipRect), tvg::CompositeMethod::ClipPath);
+    star3->composite(std::move(clipRect), tvg::CompositeMethod::ClipPath);
 
-    canvas->push(move(star3));
+    canvas->push(std::move(star3));
 
     //////////////////////////////////////////////
     auto picture = tvg::Picture::gen();
@@ -134,9 +133,9 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     clipPath->translate(20, 20);
 
     //Clipping picture to path
-    picture->composite(move(clipPath), tvg::CompositeMethod::ClipPath);
+    picture->composite(std::move(clipPath), tvg::CompositeMethod::ClipPath);
 
-    canvas->push(move(picture));
+    canvas->push(std::move(picture));
 
     //////////////////////////////////////////////
     auto shape1 = tvg::Shape::gen();
@@ -145,12 +144,12 @@ void tvgDrawCmds(tvg::Canvas* canvas)
 
     // color/alpha/opacity are ignored for a clip object - no need to set them
     auto clipShape = tvg::Shape::gen();
-    clipShape->appendRect(600, 420, 100, 100, 0, 0);
+    clipShape->appendRect(600, 420, 100, 100);
 
     //Clipping shape1 to clipShape
-    shape1->composite(move(clipShape), tvg::CompositeMethod::ClipPath);
+    shape1->composite(std::move(clipShape), tvg::CompositeMethod::ClipPath);
 
-    canvas->push(move(shape1));
+    canvas->push(std::move(shape1));
 }
 
 

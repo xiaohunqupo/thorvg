@@ -41,29 +41,36 @@ TEST_CASE("Pushing Paints Into Scene", "[tvgScene]")
     auto scene = Scene::gen();
     REQUIRE(scene);
 
+    Paint* paints[3];
+
     //Pushing Paints
-    REQUIRE(scene->push(Shape::gen()) == Result::Success);
-    REQUIRE(scene->push(Picture::gen()) == Result::Success);
-    REQUIRE(scene->push(Scene::gen()) == Result::Success);
+    auto p1 = Shape::gen();
+    paints[0] = p1.get();
+    REQUIRE(scene->push(std::move(p1)) == Result::Success);
+
+    auto p2 = Picture::gen();
+    paints[1] = p2.get();
+    REQUIRE(scene->push(std::move(p2)) == Result::Success);
+
+    auto p3 = Picture::gen();
+    paints[2] = p3.get();
+    REQUIRE(scene->push(std::move(p3)) == Result::Success);
 
     //Pushing Null Pointer
     REQUIRE(scene->push(nullptr) == Result::MemoryCorruption);
 
     //Pushing Invalid Paint
     std::unique_ptr<Shape> shape = nullptr;
-    REQUIRE(scene->push(move(shape)) == Result::MemoryCorruption);
-}
+    REQUIRE(scene->push(std::move(shape)) == Result::MemoryCorruption);
 
-TEST_CASE("Scene Memory Reservation", "[tvgScene]")
-{
-    auto scene = Scene::gen();
-    REQUIRE(scene);
-
-    //Check Growth / Reduction
-    REQUIRE(scene->reserve(10) == Result::Success);
-    REQUIRE(scene->reserve(1000) == Result::Success);
-    REQUIRE(scene->reserve(100) == Result::Success);
-    REQUIRE(scene->reserve(0) == Result::Success);
+    //Check list of paints
+    auto list = scene->paints();
+    REQUIRE(list.size() == 3);
+    int idx = 0;
+    for (auto paint : list) {
+       REQUIRE(paints[idx] == paint);
+       ++idx;
+    }
 }
 
 TEST_CASE("Scene Clear", "[tvgScene]")
@@ -90,8 +97,8 @@ TEST_CASE("Scene Clear And Reuse Shape", "[tvgScene]")
     REQUIRE(shape);
     Shape* pShape = shape.get();
 
-    REQUIRE(scene->push(move(shape)) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape)) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
     REQUIRE(canvas->update() == Result::Success);
 
     //No deallocate shape.

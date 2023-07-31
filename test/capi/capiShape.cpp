@@ -29,6 +29,12 @@ TEST_CASE("Multiple shapes", "[capiShapes]")
     Tvg_Paint* paint = tvg_shape_new();
     REQUIRE(paint);
 
+    Tvg_Identifier id = TVG_IDENTIFIER_UNDEF;
+    REQUIRE(tvg_paint_get_identifier(paint, &id) == TVG_RESULT_SUCCESS);
+    REQUIRE(id == TVG_IDENTIFIER_SHAPE);
+    REQUIRE(id != TVG_IDENTIFIER_SCENE);
+    REQUIRE(id != TVG_IDENTIFIER_PICTURE);
+
     REQUIRE(tvg_shape_append_rect(paint, 0, 0, 100, 100, 0, 0) == TVG_RESULT_SUCCESS);
     REQUIRE(tvg_shape_append_rect(paint, 0, 0, 100, 100, 50, 50) == TVG_RESULT_SUCCESS);
     REQUIRE(tvg_shape_append_rect(paint, 0, 0, 100, 100, 100, 100) == TVG_RESULT_SUCCESS);
@@ -218,6 +224,7 @@ TEST_CASE("Stroke join", "[capiStrokeJoin]")
     REQUIRE(paint);
 
     Tvg_Stroke_Join join;
+    float ml = -1.0f;
 
     REQUIRE(tvg_shape_set_stroke_join(paint, TVG_STROKE_JOIN_BEVEL) == TVG_RESULT_SUCCESS);
     REQUIRE(tvg_shape_get_stroke_join(paint, &join) == TVG_RESULT_SUCCESS);
@@ -226,6 +233,20 @@ TEST_CASE("Stroke join", "[capiStrokeJoin]")
     REQUIRE(tvg_shape_set_stroke_join(paint, TVG_STROKE_JOIN_MITER) == TVG_RESULT_SUCCESS);
     REQUIRE(tvg_shape_get_stroke_join(paint, &join) == TVG_RESULT_SUCCESS);
     REQUIRE(join == TVG_STROKE_JOIN_MITER);
+
+
+    REQUIRE(tvg_shape_get_stroke_miterlimit(paint, &ml) == TVG_RESULT_SUCCESS);
+    REQUIRE(ml == 4.0f);
+
+    REQUIRE(tvg_shape_set_stroke_miterlimit(paint, 1000.0f) == TVG_RESULT_SUCCESS);
+    REQUIRE(tvg_shape_get_stroke_miterlimit(paint, &ml) == TVG_RESULT_SUCCESS);
+    REQUIRE(ml == 1000.0f);
+
+    REQUIRE(tvg_shape_set_stroke_miterlimit(paint, -0.001f) == TVG_RESULT_NOT_SUPPORTED);
+    REQUIRE(tvg_shape_get_stroke_miterlimit(paint, &ml) == TVG_RESULT_SUCCESS);
+    REQUIRE(ml == 1000.0f);
+
+
 
     REQUIRE(tvg_paint_del(paint) == TVG_RESULT_SUCCESS);
 }
@@ -266,3 +287,16 @@ TEST_CASE("Fill rule", "[capiFillRule]")
 
     REQUIRE(tvg_paint_del(paint) == TVG_RESULT_SUCCESS);
 }
+
+TEST_CASE("Paint order", "[capiPaintOrder]")
+{
+    Tvg_Paint* paint = tvg_shape_new();
+    REQUIRE(paint);
+
+    REQUIRE(tvg_shape_set_paint_order(nullptr, true) == TVG_RESULT_INVALID_ARGUMENT);
+    REQUIRE(tvg_shape_set_paint_order(paint, true) == TVG_RESULT_SUCCESS);
+    REQUIRE(tvg_shape_set_paint_order(paint, false) == TVG_RESULT_SUCCESS);
+
+    REQUIRE(tvg_paint_del(paint) == TVG_RESULT_SUCCESS);
+}
+

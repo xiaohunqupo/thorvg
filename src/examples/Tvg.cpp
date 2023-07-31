@@ -28,7 +28,7 @@
 /************************************************************************/
 
 #define NUM_PER_ROW 7
-#define NUM_PER_COL 6
+#define NUM_PER_COL 7
 #define SIZE (WIDTH/NUM_PER_ROW)
 
 static int counter = 0;
@@ -37,6 +37,8 @@ static std::vector<unique_ptr<tvg::Picture>> pictures;
 
 void tvgDirCallback(const char* name, const char* path, void* data)
 {
+    if (counter >= NUM_PER_ROW * NUM_PER_COL) return;
+
     //ignore if not tvgs.
     const char *ext = name + strlen(name) - 3;
     if (strcmp(ext, "tvg")) return;
@@ -51,7 +53,7 @@ void tvgDirCallback(const char* name, const char* path, void* data)
     picture->size(SIZE, SIZE);
     picture->translate((counter % NUM_PER_ROW) * SIZE, (counter / NUM_PER_ROW) * (HEIGHT / NUM_PER_COL));
 
-    pictures.push_back(move(picture));
+    pictures.push_back(std::move(picture));
 
     cout << "TVG: " << buf << endl;
 
@@ -64,10 +66,10 @@ void tvgDrawCmds(tvg::Canvas* canvas)
 
     //Background
     auto shape = tvg::Shape::gen();
-    shape->appendRect(0, 0, WIDTH, HEIGHT, 0, 0);    //x, y, w, h, rx, ry
-    shape->fill(255, 255, 255, 255);                 //r, g, b, a
+    shape->appendRect(0, 0, WIDTH, HEIGHT);          //x, y, w, h
+    shape->fill(255, 255, 255);                      //r, g, b
 
-    if (canvas->push(move(shape)) != tvg::Result::Success) return;
+    if (canvas->push(std::move(shape)) != tvg::Result::Success) return;
 
     eina_file_dir_list(EXAMPLE_DIR, EINA_TRUE, tvgDirCallback, canvas);
 
@@ -76,7 +78,7 @@ void tvgDrawCmds(tvg::Canvas* canvas)
        This means it earns the time to finish loading tvg resources,
        otherwise you can push pictures immediately. */
     for (auto& paint : pictures) {
-        canvas->push(move(paint));
+        canvas->push(std::move(paint));
     }
 
     pictures.clear();
@@ -172,9 +174,9 @@ int main(int argc, char **argv)
         elm_init(argc, argv);
 
         if (tvgEngine == tvg::CanvasEngine::Sw) {
-            createSwView();
+            createSwView(1024, 1024);
         } else {
-            createGlView();
+            createGlView(1024, 1024);
         }
 
         elm_run();

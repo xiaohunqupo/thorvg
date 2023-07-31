@@ -31,9 +31,9 @@ using namespace std;
 /************************************************************************/
 /* Drawing Commands                                                     */
 /************************************************************************/
-#define WIDTH 800
-#define HEIGHT 800
-#define NUM_PER_LINE 5
+#define WIDTH 1024
+#define HEIGHT 1024
+#define NUM_PER_LINE 7
 #define SIZE (WIDTH/NUM_PER_LINE)
 
 static size_t counter = 0;
@@ -72,7 +72,7 @@ void tvgDrawCmds(tvg::Canvas* canvas, const char* path, const char* name)
     picture->scale(scale);
     picture->translate(shiftX, shiftY);
 
-    if (canvas->push(move(picture)) != tvg::Result::Success) return;
+    if (canvas->push(std::move(picture)) != tvg::Result::Success) return;
 
     cout << "SVG: " << buf << endl;
 
@@ -130,7 +130,7 @@ void tvgSwTest(const char* name, const char* path, void* data)
 
     tvgDrawCmds(canvas.get(), path, name);
 
-    canvases.push_back(move(canvas));
+    canvases.push_back(std::move(canvas));
 }
 
 
@@ -168,7 +168,7 @@ void initGLview(Evas_Object *obj)
        Canvas keeps this shape node unless user call canvas->clear() */
     tvgDrawCmds(canvas.get(), objData->path, objData->name);
 
-    canvases.push_back(move(canvas));
+    canvases.push_back(std::move(canvas));
 }
 
 

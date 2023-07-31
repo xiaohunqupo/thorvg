@@ -1,7 +1,7 @@
 project('thorvg',
         'cpp',
-        default_options : ['buildtype=debugoptimized', 'b_sanitize=none', 'werror=false', 'optimization=s', 'cpp_std=c++14'],
-        version : '0.8.99',
+        default_options : ['buildtype=debugoptimized', 'b_sanitize=none', 'werror=false', 'optimization=s', 'cpp_std=c++14', 'strip=true'],
+        version : '0.10.99',
         license : 'MIT')
 
 config_h = configuration_data()
@@ -18,7 +18,7 @@ if get_option('engines').contains('sw') == true
     config_h.set10('THORVG_SW_RASTER_SUPPORT', true)
 endif
 
-if get_option('engines').contains('gl') == true
+if get_option('engines').contains('gl_beta') == true
     config_h.set10('THORVG_GL_RASTER_SUPPORT', true)
 endif
 
@@ -44,6 +44,15 @@ endif
 if all_loaders or get_option('loaders').contains('jpg') == true
     config_h.set10('THORVG_JPG_LOADER_SUPPORT', true)
 endif
+
+if get_option('loaders').contains('webp_beta') == true
+    config_h.set10('THORVG_WEBP_LOADER_SUPPORT', true)
+endif
+
+if get_option('loaders').contains('lottie_beta') == true
+    config_h.set10('THORVG_LOTTIE_LOADER_SUPPORT', true)
+endif
+
 
 #Savers
 all_savers = false
@@ -114,13 +123,15 @@ Summary:
     Loader (SVG):          @7@
     Loader (PNG):          @8@
     Loader (JPG):          @9@
-    Saver (TVG):           @10@
-    CAPI Binding:          @11@
-    Log Message:           @12@
-    Tests:                 @13@
-    Examples:              @14@
-    Tool (Svg2Tvg):        @15@
-    Tool (Svg2Png):        @16@
+    Loader (WEBP_BETA):    @10@
+    Loader (LOTTIE_BETA):  @11@
+    Saver (TVG):           @12@
+    CAPI Binding:          @13@
+    Log Message:           @14@
+    Tests:                 @15@
+    Examples:              @16@
+    Tool (Svg2Tvg):        @17@
+    Tool (Svg2Png):        @18@
 
 '''.format(
         meson.project_version(),
@@ -128,11 +139,13 @@ Summary:
         get_option('prefix'),
         simd_type,
         get_option('engines').contains('sw'),
-        get_option('engines').contains('gl'),
+        get_option('engines').contains('gl_beta'),
         all_loaders or get_option('loaders').contains('tvg'),
         all_loaders or get_option('loaders').contains('svg'),
         all_loaders or get_option('loaders').contains('png'),
         all_loaders or get_option('loaders').contains('jpg'),
+        get_option('loaders').contains('webp_beta'),
+        get_option('loaders').contains('lottie_beta'),
         all_savers or get_option('savers').contains('tvg'),
         get_option('bindings').contains('capi'),
         get_option('log'),

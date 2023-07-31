@@ -28,7 +28,7 @@
 /************************************************************************/
 
 #define NUM_PER_LINE 16
-#define SIZE 50
+#define SIZE 80
 
 static bool rendered = false;
 static int xCnt = 0;
@@ -90,10 +90,10 @@ void tvgDrawCmds(tvg::Canvas* canvas)
 
     //Background
     auto shape = tvg::Shape::gen();
-    shape->appendRect(0, 0, WIDTH, HEIGHT, 0, 0);    //x, y, w, h, rx, ry
-    shape->fill(255, 255, 255, 255);                 //r, g, b, a
+    shape->appendRect(0, 0, WIDTH, HEIGHT);          //x, y, w, h
+    shape->fill(255, 255, 255);                      //r, g, b
 
-    if (canvas->push(move(shape)) != tvg::Result::Success) return;
+    if (canvas->push(std::move(shape)) != tvg::Result::Success) return;
 
     eina_file_dir_list(EXAMPLE_DIR, EINA_TRUE, svgDirCallback, canvas);
 
@@ -102,7 +102,7 @@ void tvgDrawCmds(tvg::Canvas* canvas)
        This means it earns the time to finish loading svg resources,
        otherwise you can push pictures immediately. */
     for (auto picture : pictures) {
-        canvas->push(unique_ptr<tvg::Picture>(picture));
+        canvas->push(tvg::cast<tvg::Picture>(picture));
     }
 }
 
@@ -235,10 +235,10 @@ int main(int argc, char **argv)
         Elm_Transit *transit = elm_transit_add();
 
         if (tvgEngine == tvg::CanvasEngine::Sw) {
-            auto view = createSwView();
+            auto view = createSwView(1280, 1280);
             elm_transit_effect_add(transit, transitSwCb, view, nullptr);
         } else {
-            auto view = createGlView();
+            auto view = createGlView(1280, 1280);
             elm_transit_effect_add(transit, transitGlCb, view, nullptr);
         }
 

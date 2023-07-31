@@ -31,7 +31,10 @@
 #endif
 
 #include "tvgTvgCommon.h"
+#include "tvgShapeImpl.h"
 
+
+#define P(A) A->pImpl
 
 /************************************************************************/
 /* Internal Class Implementation                                        */
@@ -108,12 +111,13 @@ static bool _parseScene(TvgBinBlock block, Paint *paint)
 {
     auto scene = static_cast<Scene*>(paint);
 
+    //TODO: Keep this for the compatibility, Remove in TVG 1.0 release
     //Case1: scene reserve count
     if (block.type == TVG_TAG_SCENE_RESERVEDCNT) {
         if (block.length != SIZE(uint32_t)) return false;
         uint32_t reservedCnt;
         READ_UI32(&reservedCnt, block.data);
-        scene->reserve(reservedCnt);
+        //scene->reserve(reservedCnt);
         return true;
     }
 
@@ -183,7 +187,7 @@ static unique_ptr<Fill> _parseShapeFill(const char *ptr, const char *end)
 
                 auto fillGradRadial = RadialGradient::gen();
                 fillGradRadial->radial(x, y, radius);
-                fillGrad = move(fillGradRadial);
+                fillGrad = std::move(fillGradRadial);
                 break;
             }
             case TVG_TAG_FILL_LINEAR_GRADIENT: {
@@ -202,7 +206,7 @@ static unique_ptr<Fill> _parseShapeFill(const char *ptr, const char *end)
 
                 auto fillGradLinear = LinearGradient::gen();
                 fillGradLinear->linear(x1, y1, x2, y2);
-                fillGrad = move(fillGradLinear);
+                fillGrad = std::move(fillGradLinear);
                 break;
             }
             case TVG_TAG_FILL_FILLSPREAD: {
@@ -286,6 +290,11 @@ static bool _parseShapeStroke(const char *ptr, const char *end, Shape *shape)
                 shape->stroke((StrokeJoin) *block.data);
                 break;
             }
+            case TVG_TAG_SHAPE_STROKE_ORDER: {
+                if (block.length != SIZE(TvgBinFlag)) return false;
+                P(shape)->strokeFirst((bool) *block.data);
+                break;
+            }
             case TVG_TAG_SHAPE_STROKE_WIDTH: {
                 if (block.length != SIZE(float)) return false;
                 float width;
@@ -301,11 +310,18 @@ static bool _parseShapeStroke(const char *ptr, const char *end, Shape *shape)
             case TVG_TAG_SHAPE_STROKE_FILL: {
                 auto fill = _parseShapeFill(block.data, block.end);
                 if (!fill) return false;
-                shape->stroke(move(move(fill)));
+                shape->stroke(std::move(fill));
                 break;
             }
             case TVG_TAG_SHAPE_STROKE_DASHPTRN: {
                 if (!_parseShapeStrokeDashPattern(block.data, block.end, shape)) return false;
+                break;
+            }
+            case TVG_TAG_SHAPE_STROKE_MITERLIMIT: {
+                if (block.length != SIZE(float)) return false;
+                float miterlimit;
+                READ_FLOAT(&miterlimit, block.data);
+                shape->strokeMiterlimit(miterlimit);
                 break;
             }
             default: {
@@ -334,7 +350,7 @@ static bool _parseShape(TvgBinBlock block, Paint* paint)
         case TVG_TAG_SHAPE_FILL: {
             auto fill = _parseShapeFill(block.data, block.end);
             if (!fill) return false;
-            shape->fill(move(fill));
+            shape->fill(std::move(fill));
             return true;
         }
         case TVG_TAG_SHAPE_COLOR: {

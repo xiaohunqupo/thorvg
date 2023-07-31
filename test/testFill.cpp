@@ -89,7 +89,7 @@ TEST_CASE("Common Filling", "[tvgFill]")
     REQUIRE(shape);
 
     auto pFill = fill.get();
-    REQUIRE(shape->fill(move(fill)) == Result::Success);
+    REQUIRE(shape->fill(std::move(fill)) == Result::Success);
     REQUIRE(shape->fill() == pFill);
 }
 
@@ -194,7 +194,7 @@ TEST_CASE("Linear Filling Dupliction", "[tvgFill]")
     REQUIRE(fill->transform(m) == Result::Success);
 
     //Duplication
-    auto dup = unique_ptr<LinearGradient>(static_cast<LinearGradient*>(fill->duplicate()));
+    auto dup = tvg::cast<LinearGradient>(fill->duplicate());
     REQUIRE(dup);
 
     REQUIRE(dup->spread() == FillSpread::Reflect);
@@ -249,7 +249,7 @@ TEST_CASE("Radial Filling Dupliction", "[tvgFill]")
     REQUIRE(fill->transform(m) == Result::Success);
 
     //Duplication
-    auto dup = unique_ptr<RadialGradient>(static_cast<RadialGradient*>(fill->duplicate()));
+    auto dup = tvg::cast<RadialGradient>(fill->duplicate());
     REQUIRE(dup);
 
     REQUIRE(dup->spread() == FillSpread::Reflect);

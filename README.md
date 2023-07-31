@@ -1,25 +1,29 @@
 [![License](https://img.shields.io/badge/licence-MIT-green.svg?style=flat)](LICENSE)
+![BinarySize](https://img.shields.io/badge/Size-150kb-blue)
 [![Discord](https://img.shields.io/badge/Community-5865f2?style=flat&logo=discord&logoColor=white)](https://discord.gg/n25xj6J6HM)
 <br>
-[![Build Linux](https://github.com/Samsung/thorvg/actions/workflows/actions.yml/badge.svg?branch=master&event=push)](https://github.com/Samsung/thorvg/actions/workflows/actions.yml)
+[![CodeFactor](https://www.codefactor.io/repository/github/hermet/thorvg/badge)](https://www.codefactor.io/repository/github/hermet/thorvg)
+[![Build Linux](https://github.com/Samsung/thorvg/actions/workflows/build_linux.yml/badge.svg?branch=master&event=push)](https://github.com/Samsung/thorvg/actions/workflows/actions.yml)
 [![Build Windows](https://github.com/Samsung/thorvg/actions/workflows/build_win.yml/badge.svg?branch=master&event=push)](https://github.com/Samsung/thorvg/actions/workflows/build_win.yml)
 
 # ThorVG
 <p align="center">
   <img width="800" height="400" src="https://github.com/Samsung/thorvg/blob/master/res/logo/512/thorvg-banner.png">
 </p>
-ThorVG is a platform-independent portable library for drawing vector-based scenes and animation. It's open-source software that is freely used by a variety of software platforms and applications. ThorVG provides neat and easy APIs. Its library has no dependencies and keeps a super compact size. It serves as the vector graphics engine for Tizen OS that powers many products. <br />
+ThorVG is an open-source, platform-independent portable library used for drawing vector-based scenes and animations, which can be freely utilized across various software platforms and applications. With user-friendly APIs, it has no dependencies and maintains a super compact size. It serves as the vector graphics engine for Tizen OS and the Godot Platform, powering numerous products. <br />
 <br />
 The following list shows primitives that are supported by ThorVG: <br />
+<br />
 
- * Shapes: Line, Arc, Curve, Path, Polygon, ...
- * Filling: Solid, Linear and Radial Gradient
+ * Shapes: Line, Arc, Curve, Path, Polygon
+ * Filling: Solid & Gradients and Texture Mapping
  * Scene Graph & Affine Transformation (translation, rotation, scale, ...)
  * Stroking: Width, Join, Cap, Dash
- * Composition: Blending, Masking, Path Clipping, ...
- * Pictures: TVG, SVG, JPG, PNG, Bitmap
+ * Composition: Blending, Masking, Path Clipping
+ * Images: TVG, SVG, JPG, PNG, WebP, Bitmap
+ * Animations: Lottie
 <p align="center">
-  <img width="930" height="473" src="https://github.com/Samsung/thorvg/blob/master/res/example_primitives.png">
+  <img width="900" height="472" src="https://github.com/Samsung/thorvg/blob/master/res/example_primitives.png">
 </p>
 <br />
 If your program has the main renderer, your program could call ThorVG APIs while switching drawing contexts between the main renderer and ThorVG. During the API calls, ThorVG serializes drawing commands among the volatile paints' nodes then performs synchronous/asynchronous rendering using its backend raster engines. ThorVG supports vector images such as SVG, also expands, supporting other popular formats on demand. On the rendering, it could spawn intermediate frame-buffers for compositing scenes only when it's necessary. The next figure shows you a brief strategy on how to use ThorVG on your system.<br />
@@ -39,9 +43,11 @@ ThorVG has the threading mechanism so that it tries to acquire the next scenes w
 - [ThorVG](#thorvg)
   - [Installation](#installation)
     - [Meson Build](#meson-build)
+    - [Using with Visual Studio](#using-with-visual-studio)
     - [vcpkg](#vcpkg)
   - [Quick Start](#quick-start)
   - [SVG](#svg)
+  - [Lottie](#lottie)
   - [TVG Picture](#tvg-picture)
   - [Practices](#practices)
     - [Tizen](#tizen)
@@ -72,6 +78,12 @@ meson build
 Run ninja to build & install ThorVG:
 ```
 ninja -C build install
+```
+
+### Using with Visual Studio
+If you want to create Visual Studio project files, use the command --backend=vs. The resulting solution file (thorvg.sln) will be located in the build folder.
+```
+meson build --backend=vs
 ```
 
 ### vcpkg
@@ -203,20 +215,58 @@ to keep it lightweight, so it's useful for the embedded systems. Among the SVG T
  - Fonts & Text
  - Interactivity
  - Multimedia
- - Scripting (Partially Supported)
 
 The following code snippet shows how to draw SVG image using ThorVG:
 
 ```cpp
 auto picture = tvg::Picture::gen();         //generate a picture
-picture->load("tiger.svg");                 //load SVG file
+picture->load("tiger.svg");                 //load a SVG file
 canvas->push(move(picture));                //push the picture into the canvas
 ```
 
-The result:
+The result is:
 
 <p align="center">
   <img width="300" height="300" src="https://github.com/Samsung/thorvg/blob/master/res/example_tiger.png">
+</p>
+
+[Back to contents](#contents)
+<br />
+<br />
+## Lottie
+
+ThorVG aims to fully support Lottie Animation features. Lottie is a JSON-based vector animation file format that enables seamless distribution of animations on any platform, akin to shipping static assets. These files are compact and compatible with various devices, scaling up or down without pixelation. With Lottie, you can easily create, edit, test, collaborate, and distribute animations in a user-friendly manner. For more information, please visit [LottieFiles](https://www.lottiefiles.com)' website. <br />
+<br />
+Currently, ThorVG provides experimental support for Lottie Animation, and while most features are supported, a few advanced properties of Lottie may not be available yet:
+<br />
+
+ - Maskings
+ - Trimpath
+ - Images
+ - Texts
+ - Polystar
+ - Repeater
+ - Merge-path
+ - Filter Effects
+ - Expressions
+
+The following code snippet demonstrates how to use ThorVG to play a Lottie animation.
+```cpp
+auto animation = tvg::Animation::gen();     //generate an animation
+auto picture = animation->picture()         //acquire a picture which associated with the animation.
+picture->load("lottie.json");               //load a Lottie file
+auto duration = animation->duration();      //figure out the animation duration time in seconds.
+canvas->push(tvg::cast(picture));           //push the picture into the canvas
+```
+First, an animation and a picture are generated. The Lottie file (lottie.json) is loaded into the picture, and then the picture is added to the canvas. The animation frames are controlled using the animation object to play the Lottie animation. Also you might want to know the animation duration time to run your animation loop.
+```cpp
+animation->frame(animation->totalFrame() * progress);  //Set a current animation frame to display
+canvas->update(animation->picture());                  //Update the picture to be redrawn.
+```
+Let's suppose the progress variable determines the position of the animation, ranging from 0 to 1 based on the total duration time of the animation. Adjusting the progress value allows you to control the animation at the desired position. Afterwards, the canvas is updated to redraw the picture with the updated animation frame.<br />
+<br />
+<p align="center">
+  <img width="600" height="600" src="https://github.com/Samsung/thorvg/blob/master/res/example_lottie.gif">
 </p>
 
 [Back to contents](#contents)
@@ -256,6 +306,13 @@ ThorVG has been integrated into the [Tizen](https://www.tizen.org) platform as t
   <img width="798" height="285" src="https://github.com/Samsung/thorvg/blob/master/res/example_tizen.png">
 </p>
 
+### Godot
+ThorVG has been integrated into the [Godot](https://www.godotengine.org) project to enable the creation of sleek and visually appealing user interfaces (UIs) and vector resources in the Godot game engine. Godot is a modern game engine that is both free and open-source, offering a comprehensive range of tools. With Godot, you can concentrate on developing your game without the need to recreate existing functionalities.
+
+<p align="center">
+  <img width="798" height="440" src="https://github.com/Samsung/thorvg/blob/master/res/example_godot.png">
+</p>
+
 ### Rive
 We're also building a [Rive](https://rive.app/) port that supports Rive Animation run through the ThorVG backend. Rive is a brand new animation platform
 that supports fancy, user-interactive vector animations. For more details see [Rive-Tizen](https://github.com/rive-app/rive-tizen) on [Github](https://github.com/rive-app/).
@@ -264,25 +321,21 @@ that supports fancy, user-interactive vector animations. For more details see [R
   <img width="600" height="324" src="https://github.com/Samsung/thorvg/blob/master/res/example_rive.gif">
 </p>
 
-### Godot
-ThorVG has been integrated into the [Godot](https://www.godotengine.org) project for use of neat and slick icons in Godot editors. Godot is a completely free and open-source modern game engine, it provides a huge set of common tools, so you can just focus on making your game without reinventing the wheel.
-
-<p align="center">
-  <img width="798" height="461" src="https://github.com/Samsung/thorvg/blob/master/res/example_godot.png">
-</p>
-
 [Back to contents](#contents)
 <br />
 <br />
 ## Examples
-There are various examples available in `thorvg/src/examples` to help you understand ThorVG APIs.
+here are plenty of sample code in `thorvg/src/examples` to help you in understanding the ThorVG APIs.
 
-To execute these examples, you can build them with the following meson option:
+To execute these examples, you can build them with the following meson build option:
 ```
-meson -Dexamples=true . build
+meson . build -Dexamples=true
 ```
-Note that these examples require the EFL `elementary` package for launching. If you're using Linux-based OS, you can easily
-install this package from your OS distribution server. Otherwise, please visit the official [EFL page](https://enlightenment.org/) for more information.
+Note that these examples require the EFL dev package for launching. If you're using Linux-based OS, you can easily install this package from your OS distribution server. For Ubuntu, you can install it with this command.
+```
+apt-get install libefl-all-dev
+```
+Alternatively, you can download the package [here](https://download.enlightenment.org/rel/win/efl/) for Windows. For more information, please visit the official [EFL page](https://enlightenment.org/).
 
 [Back to contents](#contents)
 <br />
@@ -296,7 +349,7 @@ ThorVG API documentation is available at [thorvg.org/apis](https://www.thorvg.or
 <br />
 ## Tools
 ### ThorVG Viewer
-ThorVG provides the resource verification tool for the ThorVG Engine. [ThorVG viewer](https://samsung.github.io/thorvg.viewer) does immediate rendering via web browser running on the ThorVG web-assembly binary, allowing real-time editing of the vector elements on it. It doesn't upload your resources to any external server while allowing to export to supported formats such as TVG, so the designer resource copyright is protected.
+ThorVG provides the resource verification tool for the ThorVG Engine. [ThorVG viewer](https://thorvg.github.io/thorvg.viewer/) does immediate rendering via web browser running on the ThorVG web-assembly binary, allowing real-time editing of the vector elements on it. It doesn't upload your resources to any external server while allowing to export to supported formats such as TVG, so the designer resource copyright is protected.
 
 https://user-images.githubusercontent.com/71131832/130445967-fb8f7d81-9c89-4598-b7e4-2c046d5d7438.mp4
 
@@ -305,7 +358,7 @@ ThorVG provides an executable `svg2png` converter that generates a PNG file from
 
 To use the `svg2png`, you must turn on this feature in the build option:
 ```
-meson -Dtools=svg2png . build
+meson . build -Dtools=svg2png
 ```
 Alternatively, you can add the `svg2png` value to the `tools` option in `meson_option.txt`. The build output will be located in `{builddir}/src/bin/svg2png/`.
 <br />
@@ -338,9 +391,9 @@ Examples:
 ### SVG to TVG
 ThorVG provides an executable `svg2tvg` converter that generates a TVG file from an SVG file.
 
-To use `svg2tvg`, you must turn on this feature in the build option:
+To use `svg2tvg`, you need to activate this feature in the build option:
 ```
-meson -Dtools=svg2tvg . build
+meson . build -Dtools=svg2tvg
 ```
 Alternatively, you can add the `svg2tvg` value to the `tools` option in `meson_option.txt`. The build output will be located in `{builddir}/src/bin/svg2tvg/`.
 
@@ -360,6 +413,10 @@ Examples:
 ## API Bindings
 Our main development APIs are written in C++, but ThorVG also provides API bindings for C.
 
+To enable CAPI binding, you need to activate this feature in the build options:
+```
+meson . build -Dbindings="capi"
+```
 [Back to contents](#contents)
 <br />
 <br />

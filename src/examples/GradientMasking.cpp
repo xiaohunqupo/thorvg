@@ -33,12 +33,12 @@ void tvgDrawCmds(tvg::Canvas* canvas)
 
     //Solid Rectangle
     auto shape = tvg::Shape::gen();
-    shape->appendRect(0, 0, 400, 400, 0, 0);
+    shape->appendRect(0, 0, 400, 400);
 
     //Mask
     auto mask = tvg::Shape::gen();
     mask->appendCircle(200, 200, 125, 125);
-    mask->fill(255, 0, 0, 255);
+    mask->fill(255, 0, 0);
 
     auto fill = tvg::LinearGradient::gen();
     fill->linear(0, 0, 400, 400);
@@ -46,10 +46,10 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     colorStops[0] = {0,0,0,0,255};
     colorStops[1] = {1,255,255,255,255};
     fill->colorStops(colorStops,2);
-    shape->fill(move(fill));
+    shape->fill(std::move(fill));
 
-    shape->composite(move(mask), tvg::CompositeMethod::AlphaMask);
-    canvas->push(move(shape));
+    shape->composite(std::move(mask), tvg::CompositeMethod::AlphaMask);
+    canvas->push(std::move(shape));
 
 //-------------------------------------------
 
@@ -70,7 +70,7 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     //Mask
     auto mask1 = tvg::Shape::gen();
     mask1->appendCircle(600, 200, 125, 125);
-    mask1->fill(255, 0, 0, 255);
+    mask1->fill(255, 0, 0);
 
     auto fill1 = tvg::LinearGradient::gen();
     fill1->linear(400, 0, 800, 400);
@@ -78,21 +78,21 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     colorStops1[0] = {0,0,0,0,255};
     colorStops1[1] = {1,1,255,255,255};
     fill1->colorStops(colorStops1,2);
-    shape1->fill(move(fill1));
+    shape1->fill(std::move(fill1));
 
-    shape1->composite(move(mask1), tvg::CompositeMethod::AlphaMask);
-    canvas->push(move(shape1));
+    shape1->composite(std::move(mask1), tvg::CompositeMethod::AlphaMask);
+    canvas->push(std::move(shape1));
 
 //-------------------------------------------
 
     //Solid Rectangle
     auto shape2 = tvg::Shape::gen();
-    shape2->appendRect(0, 400, 400, 400, 0, 0);
+    shape2->appendRect(0, 400, 400, 400);
 
     //Mask
     auto mask2 = tvg::Shape::gen();
     mask2->appendCircle(200, 600, 125, 125);
-    mask2->fill(255, 0, 0, 255);
+    mask2->fill(255, 0, 0);
 
     auto fill2 = tvg::LinearGradient::gen();
     fill2->linear(0, 400, 400, 800);
@@ -100,10 +100,10 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     colorStops2[0] = {0,0,0,0,255};
     colorStops2[1] = {1,255,255,255,255};
     fill2->colorStops(colorStops2,2);
-    shape2->fill(move(fill2));
+    shape2->fill(std::move(fill2));
 
-    shape2->composite(move(mask2), tvg::CompositeMethod::InvAlphaMask);
-    canvas->push(move(shape2));
+    shape2->composite(std::move(mask2), tvg::CompositeMethod::InvAlphaMask);
+    canvas->push(std::move(shape2));
 
 //-------------------------------------------
 
@@ -124,7 +124,7 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     //Mask
     auto mask3 = tvg::Shape::gen();
     mask3->appendCircle(600, 600, 125, 125);
-    mask3->fill(255, 0, 0, 255);
+    mask3->fill(255, 0, 0);
 
     auto fill3 = tvg::LinearGradient::gen();
     fill3->linear(400, 400, 800, 800);
@@ -132,10 +132,10 @@ void tvgDrawCmds(tvg::Canvas* canvas)
     colorStops3[0] = {0,0,0,0,255};
     colorStops3[1] = {1,1,255,255,255};
     fill3->colorStops(colorStops3,2);
-    shape3->fill(move(fill3));
+    shape3->fill(std::move(fill3));
 
-    shape3->composite(move(mask3), tvg::CompositeMethod::InvAlphaMask);
-    canvas->push(move(shape3));
+    shape3->composite(std::move(mask3), tvg::CompositeMethod::InvAlphaMask);
+    canvas->push(std::move(shape3));
 
 }
 

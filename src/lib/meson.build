@@ -4,7 +4,7 @@ if get_option('engines').contains('sw') == true
     subdir('sw_engine')
 endif
 
-if get_option('engines').contains('gl') == true
+if get_option('engines').contains('gl_beta') == true
     subdir('gl_engine')
 endif
 
@@ -14,6 +14,7 @@ source_file = [
    'tvgBezier.h',
    'tvgBinaryDesc.h',
    'tvgFill.h',
+   'tvgFrameModule.h',
    'tvgLoader.h',
    'tvgLoadModule.h',
    'tvgLzw.h',
@@ -26,6 +27,7 @@ source_file = [
    'tvgShapeImpl.h',
    'tvgTaskScheduler.h',
    'tvgAccessor.cpp',
+   'tvgAnimation.cpp',
    'tvgBezier.cpp',
    'tvgCanvas.cpp',
    'tvgFill.cpp',

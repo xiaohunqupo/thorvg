@@ -38,7 +38,7 @@ TEST_CASE("Basic draw", "[tvgSwEngine]")
     REQUIRE(canvas);
 
     uint32_t buffer[100*100];
-    REQUIRE(canvas->target(buffer, 100, 100, 100, SwCanvas::Colorspace::ABGR8888) == Result::Success);
+    REQUIRE(canvas->target(buffer, 100, 100, 100, SwCanvas::Colorspace::ABGR8888S) == Result::Success);
 
     //Arc Line
     auto shape1 = tvg::Shape::gen();
@@ -47,7 +47,7 @@ TEST_CASE("Basic draw", "[tvgSwEngine]")
     REQUIRE(shape1->appendArc(150, 150, 80, 10, 180, false) == Result::Success);
     REQUIRE(shape1->stroke(255, 255, 255, 255) == Result::Success);
     REQUIRE(shape1->stroke(2) == Result::Success);
-    REQUIRE(canvas->push(move(shape1)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape1)) == Result::Success);
 
     //Cubic
     auto shape2 = tvg::Shape::gen();
@@ -57,7 +57,7 @@ TEST_CASE("Basic draw", "[tvgSwEngine]")
     REQUIRE(shape2->cubicTo(62, 25, 75, 38, 75, 50) == Result::Success);
     REQUIRE(shape2->close() == Result::Success);
     REQUIRE(shape2->stroke(1) == Result::Success);
-    REQUIRE(canvas->push(move(shape2)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape2)) == Result::Success);
 
     //Line
     auto shape3 = tvg::Shape::gen();
@@ -69,7 +69,7 @@ TEST_CASE("Basic draw", "[tvgSwEngine]")
     REQUIRE(shape3->lineTo(0, 20) == Result::Success);
     REQUIRE(shape3->close() == Result::Success);
     REQUIRE(shape3->fill(255, 255, 255, 255) == Result::Success);
-    REQUIRE(canvas->push(move(shape3)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape3)) == Result::Success);
 
     //Dashed shape
     auto shape4 = tvg::Shape::gen();
@@ -84,7 +84,7 @@ TEST_CASE("Basic draw", "[tvgSwEngine]")
     REQUIRE(shape4->stroke(2) == Result::Success);
     REQUIRE(shape4->stroke(dashPattern, 2) == Result::Success);
     REQUIRE(shape4->stroke(StrokeCap::Round) == Result::Success);
-    REQUIRE(canvas->push(move(shape4)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape4)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -117,54 +117,64 @@ TEST_CASE("Image Draw", "[tvgSwEngine]")
     REQUIRE(basicPicture->load(data, 200, 300, false) == Result::Success);
     auto rectMask = tvg::Shape::gen();
     REQUIRE(rectMask);
-    REQUIRE(rectMask->appendRect(10, 10, 30, 30, 0, 0) == Result::Success);
+    REQUIRE(rectMask->appendRect(10, 10, 30, 30) == Result::Success);
+    REQUIRE(rectMask->fill(100, 100, 100, 255) == Result::Success);
     auto rleMask = tvg::Shape::gen();
     REQUIRE(rleMask);
     REQUIRE(rleMask->appendRect(0, 10, 20, 30, 5, 5) == Result::Success);
+    REQUIRE(rleMask->fill(100, 100, 100, 255) == Result::Success);
 
     // Rect images
-    auto basicPicture2 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    auto basicPicture2 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture2);
-    auto rectMask2 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    auto rectMask2 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask2);
 
-    auto basicPicture3 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    auto basicPicture3 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture3);
-    auto rectMask3 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    auto rectMask3 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask3);
 
-    auto basicPicture4 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    auto basicPicture4 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture4);
+    auto rectMask4 = tvg::cast<Shape>(rectMask->duplicate());
+    REQUIRE(rectMask4);
 
-    // Rle images
-    auto basicPicture5 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    auto basicPicture5 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture5);
 
-    auto basicPicture6 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    // Rle images
+    auto basicPicture6 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture6);
-    auto rleMask6 = std::unique_ptr<Shape>(static_cast<Shape*>(rleMask->duplicate()));
-    REQUIRE(rleMask6);
+
+    auto basicPicture7 = tvg::cast<Picture>(basicPicture->duplicate());
+    REQUIRE(basicPicture7);
+    auto rleMask7 = tvg::cast<Shape>(rleMask->duplicate());
+    REQUIRE(rleMask7);
 
     // Rect
-    REQUIRE(basicPicture->composite(move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture)) == Result::Success);
+    REQUIRE(basicPicture->composite(std::move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture)) == Result::Success);
 
-    REQUIRE(basicPicture2->composite(move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture2)) == Result::Success);
+    REQUIRE(basicPicture2->composite(std::move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture2)) == Result::Success);
 
-    REQUIRE(basicPicture3->composite(move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture3)) == Result::Success);
+    REQUIRE(basicPicture3->composite(std::move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture3)) == Result::Success);
 
-    REQUIRE(basicPicture4->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture4)) == Result::Success);
+    REQUIRE(basicPicture4->composite(std::move(rectMask4), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture4)) == Result::Success);
+
+    REQUIRE(basicPicture5->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture5)) == Result::Success);
 
     // Rle
-    REQUIRE(basicPicture5->composite(move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture5)) == Result::Success);
+    REQUIRE(basicPicture6->composite(std::move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture6)) == Result::Success);
 
-    REQUIRE(basicPicture6->composite(move(rleMask6), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(basicPicture6->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture6)) == Result::Success);
+    REQUIRE(basicPicture7->composite(std::move(rleMask7), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(basicPicture7->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture7)) == Result::Success);
 
 
     // Transformed images
@@ -175,54 +185,62 @@ TEST_CASE("Image Draw", "[tvgSwEngine]")
     REQUIRE(basicPicture->rotate(45) == Result::Success);
     rectMask = tvg::Shape::gen();
     REQUIRE(rectMask);
-    REQUIRE(rectMask->appendRect(10, 10, 30, 30, 0, 0) == Result::Success);
+    REQUIRE(rectMask->appendRect(10, 10, 30, 30) == Result::Success);
     rleMask = tvg::Shape::gen();
     REQUIRE(rleMask);
     REQUIRE(rleMask->appendRect(0, 10, 20, 30, 5, 5) == Result::Success);
 
     // Rect images
-    basicPicture2 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture2 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture2);
-    rectMask2 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    rectMask2 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask2);
 
-    basicPicture3 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture3 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture3);
-    rectMask3 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    rectMask3 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask3);
 
-    basicPicture4 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture4 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture4);
+    rectMask4 = tvg::cast<Shape>(rectMask->duplicate());
+    REQUIRE(rectMask4);
 
-    // Rle images
-    basicPicture5 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture5 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture5);
 
-    basicPicture6 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    // Rle images
+    basicPicture6 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture6);
-    rleMask6 = std::unique_ptr<Shape>(static_cast<Shape*>(rleMask->duplicate()));
-    REQUIRE(rleMask6);
+
+    basicPicture7 = tvg::cast<Picture>(basicPicture->duplicate());
+    REQUIRE(basicPicture7);
+    rleMask7 = tvg::cast<Shape>(rleMask->duplicate());
+    REQUIRE(rleMask7);
 
     // Rect
-    REQUIRE(basicPicture->composite(move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture)) == Result::Success);
+    REQUIRE(basicPicture->composite(std::move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture)) == Result::Success);
 
-    REQUIRE(basicPicture2->composite(move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture2)) == Result::Success);
+    REQUIRE(basicPicture2->composite(std::move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture2)) == Result::Success);
 
-    REQUIRE(basicPicture3->composite(move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture3)) == Result::Success);
+    REQUIRE(basicPicture3->composite(std::move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture3)) == Result::Success);
 
-    REQUIRE(basicPicture4->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture4)) == Result::Success);
+    REQUIRE(basicPicture4->composite(std::move(rectMask4), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture4)) == Result::Success);
+
+    REQUIRE(basicPicture5->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture5)) == Result::Success);
 
     // Rle
-    REQUIRE(basicPicture5->composite(move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture5)) == Result::Success);
+    REQUIRE(basicPicture6->composite(std::move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture6)) == Result::Success);
 
-    REQUIRE(basicPicture6->composite(move(rleMask6), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(basicPicture6->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture6)) == Result::Success);
+    REQUIRE(basicPicture7->composite(std::move(rleMask7), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(basicPicture7->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture7)) == Result::Success);
 
 
     // Upscaled images
@@ -232,54 +250,62 @@ TEST_CASE("Image Draw", "[tvgSwEngine]")
     REQUIRE(basicPicture->scale(2) == Result::Success);
     rectMask = tvg::Shape::gen();
     REQUIRE(rectMask);
-    REQUIRE(rectMask->appendRect(10, 10, 30, 30, 0, 0) == Result::Success);
+    REQUIRE(rectMask->appendRect(10, 10, 30, 30) == Result::Success);
     rleMask = tvg::Shape::gen();
     REQUIRE(rleMask);
     REQUIRE(rleMask->appendRect(0, 10, 20, 30, 5, 5) == Result::Success);
 
     // Rect images
-    basicPicture2 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture2 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture2);
-    rectMask2 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    rectMask2 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask2);
 
-    basicPicture3 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture3 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture3);
-    rectMask3 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    rectMask3 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask3);
 
-    basicPicture4 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture4 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture4);
+    rectMask4 = tvg::cast<Shape>(rectMask->duplicate());
+    REQUIRE(rectMask4);
 
-    // Rle images
-    basicPicture5 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture5 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture5);
 
-    basicPicture6 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    // Rle images
+    basicPicture6 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture6);
-    rleMask6 = std::unique_ptr<Shape>(static_cast<Shape*>(rleMask->duplicate()));
-    REQUIRE(rleMask6);
+
+    basicPicture7 = tvg::cast<Picture>(basicPicture->duplicate());
+    REQUIRE(basicPicture7);
+    rleMask7 = tvg::cast<Shape>(rleMask->duplicate());
+    REQUIRE(rleMask7);
 
     // Rect
-    REQUIRE(basicPicture->composite(move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture)) == Result::Success);
+    REQUIRE(basicPicture->composite(std::move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture)) == Result::Success);
 
-    REQUIRE(basicPicture2->composite(move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture2)) == Result::Success);
+    REQUIRE(basicPicture2->composite(std::move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture2)) == Result::Success);
 
-    REQUIRE(basicPicture3->composite(move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture3)) == Result::Success);
+    REQUIRE(basicPicture3->composite(std::move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture3)) == Result::Success);
 
-    REQUIRE(basicPicture4->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture4)) == Result::Success);
+    REQUIRE(basicPicture4->composite(std::move(rectMask4), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture4)) == Result::Success);
+
+    REQUIRE(basicPicture5->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture5)) == Result::Success);
 
     // Rle
-    REQUIRE(basicPicture5->composite(move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture5)) == Result::Success);
+    REQUIRE(basicPicture6->composite(std::move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture6)) == Result::Success);
 
-    REQUIRE(basicPicture6->composite(move(rleMask6), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(basicPicture6->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture6)) == Result::Success);
+    REQUIRE(basicPicture7->composite(std::move(rleMask7), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(basicPicture7->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture7)) == Result::Success);
 
 
     // Downscaled images
@@ -289,54 +315,62 @@ TEST_CASE("Image Draw", "[tvgSwEngine]")
     REQUIRE(basicPicture->scale(0.2f) == Result::Success);
     rectMask = tvg::Shape::gen();
     REQUIRE(rectMask);
-    REQUIRE(rectMask->appendRect(10, 10, 30, 30, 0, 0) == Result::Success);
+    REQUIRE(rectMask->appendRect(10, 10, 30, 30) == Result::Success);
     rleMask = tvg::Shape::gen();
     REQUIRE(rleMask);
     REQUIRE(rleMask->appendRect(0, 10, 20, 30, 5, 5) == Result::Success);
 
     // Rect images
-    basicPicture2 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture2 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture2);
-    rectMask2 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    rectMask2 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask2);
 
-    basicPicture3 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture3 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture3);
-    rectMask3 = std::unique_ptr<Shape>(static_cast<Shape*>(rectMask->duplicate()));
+    rectMask3 = tvg::cast<Shape>(rectMask->duplicate());
     REQUIRE(rectMask3);
 
-    basicPicture4 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture4 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture4);
+    rectMask4 = tvg::cast<Shape>(rectMask->duplicate());
+    REQUIRE(rectMask4);
 
-    // Rle images
-    basicPicture5 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    basicPicture5 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture5);
 
-    basicPicture6 = std::unique_ptr<Picture>(static_cast<Picture*>(basicPicture->duplicate()));
+    // Rle images
+    basicPicture6 = tvg::cast<Picture>(basicPicture->duplicate());
     REQUIRE(basicPicture6);
-    rleMask6 = std::unique_ptr<Shape>(static_cast<Shape*>(rleMask->duplicate()));
-    REQUIRE(rleMask6);
+
+    basicPicture7 = tvg::cast<Picture>(basicPicture->duplicate());
+    REQUIRE(basicPicture7);
+    rleMask7 = tvg::cast<Shape>(rleMask->duplicate());
+    REQUIRE(rleMask7);
 
     // Rect
-    REQUIRE(basicPicture->composite(move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture)) == Result::Success);
+    REQUIRE(basicPicture->composite(std::move(rectMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture)) == Result::Success);
 
-    REQUIRE(basicPicture2->composite(move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture2)) == Result::Success);
+    REQUIRE(basicPicture2->composite(std::move(rectMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture2)) == Result::Success);
 
-    REQUIRE(basicPicture3->composite(move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture3)) == Result::Success);
+    REQUIRE(basicPicture3->composite(std::move(rectMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture3)) == Result::Success);
 
-    REQUIRE(basicPicture4->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture4)) == Result::Success);
+    REQUIRE(basicPicture4->composite(std::move(rectMask4), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture4)) == Result::Success);
+
+    REQUIRE(basicPicture5->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture5)) == Result::Success);
 
     // Rle
-    REQUIRE(basicPicture5->composite(move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture5)) == Result::Success);
+    REQUIRE(basicPicture6->composite(std::move(rleMask), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture6)) == Result::Success);
 
-    REQUIRE(basicPicture6->composite(move(rleMask6), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(basicPicture6->opacity(100) == Result::Success);
-    REQUIRE(canvas->push(move(basicPicture6)) == Result::Success);
+    REQUIRE(basicPicture7->composite(std::move(rleMask7), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(basicPicture7->opacity(100) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicPicture7)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -363,33 +397,41 @@ TEST_CASE("Rect Draw", "[tvgSwEngine]")
     REQUIRE(basicShape);
     auto basicMask = tvg::Shape::gen();
     REQUIRE(basicMask);
-    REQUIRE(basicShape->appendRect(0, 0, 50, 50, 0, 0) == Result::Success);
-    REQUIRE(basicMask->appendRect(10, 10, 30, 30, 0, 0) == Result::Success);
+    REQUIRE(basicShape->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(basicMask->appendRect(10, 10, 30, 30) == Result::Success);
     REQUIRE(basicShape->fill(255, 255, 255, 155) == Result::Success);
 
-    auto basicShape2 = std::unique_ptr<Shape>(static_cast<Shape*>(basicShape->duplicate()));
+    auto basicShape2 = tvg::cast<Shape>(basicShape->duplicate());
     REQUIRE(basicShape2);
-    auto basicMask2 = std::unique_ptr<Shape>(static_cast<Shape*>(basicMask->duplicate()));
+    auto basicMask2 = tvg::cast<Shape>(basicMask->duplicate());
     REQUIRE(basicMask2);
 
-    auto basicShape3 = std::unique_ptr<Shape>(static_cast<Shape*>(basicShape->duplicate()));
+    auto basicShape3 = tvg::cast<Shape>(basicShape->duplicate());
     REQUIRE(basicShape3);
-    auto basicMask3 = std::unique_ptr<Shape>(static_cast<Shape*>(basicMask->duplicate()));
+    auto basicMask3 = tvg::cast<Shape>(basicMask->duplicate());
     REQUIRE(basicMask3);
 
-    auto basicShape4 = std::unique_ptr<Shape>(static_cast<Shape*>(basicShape->duplicate()));
+    auto basicShape4 = tvg::cast<Shape>(basicShape->duplicate());
     REQUIRE(basicShape4);
+    auto basicMask4 = tvg::cast<Shape>(basicMask->duplicate());
+    REQUIRE(basicMask4);
 
-    REQUIRE(basicShape->composite(move(basicMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicShape)) == Result::Success);
+    auto basicShape5 = tvg::cast<Shape>(basicShape->duplicate());
+    REQUIRE(basicShape5);
 
-    REQUIRE(basicShape2->composite(move(basicMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicShape2)) == Result::Success);
+    REQUIRE(basicShape->composite(std::move(basicMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape)) == Result::Success);
 
-    REQUIRE(basicShape3->composite(move(basicMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicShape3)) == Result::Success);
+    REQUIRE(basicShape2->composite(std::move(basicMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape2)) == Result::Success);
 
-    REQUIRE(canvas->push(move(basicShape4)) == Result::Success);
+    REQUIRE(basicShape3->composite(std::move(basicMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape3)) == Result::Success);
+
+    REQUIRE(basicShape4->composite(std::move(basicMask4), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape4)) == Result::Success);
+
+    REQUIRE(canvas->push(std::move(basicShape5)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -415,32 +457,40 @@ TEST_CASE("RLE Draw", "[tvgSwEngine]")
     auto basicMask = tvg::Shape::gen();
     REQUIRE(basicMask);
     REQUIRE(basicShape->appendRect(0, 0, 50, 50, 50, 50) == Result::Success);
-    REQUIRE(basicMask->appendRect(10, 10, 30, 30, 0, 0) == Result::Success);
+    REQUIRE(basicMask->appendRect(10, 10, 30, 30) == Result::Success);
     REQUIRE(basicShape->fill(255, 255, 255, 100) == Result::Success);
 
-    auto basicShape2 = std::unique_ptr<Shape>(static_cast<Shape*>(basicShape->duplicate()));
+    auto basicShape2 = tvg::cast<Shape>(basicShape->duplicate());
     REQUIRE(basicShape2);
-    auto basicMask2 = std::unique_ptr<Shape>(static_cast<Shape*>(basicMask->duplicate()));
+    auto basicMask2 = tvg::cast<Shape>(basicMask->duplicate());
     REQUIRE(basicMask2);
 
-    auto basicShape3 = std::unique_ptr<Shape>(static_cast<Shape*>(basicShape->duplicate()));
+    auto basicShape3 = tvg::cast<Shape>(basicShape->duplicate());
     REQUIRE(basicShape3);
-    auto basicMask3 = std::unique_ptr<Shape>(static_cast<Shape*>(basicMask->duplicate()));
+    auto basicMask3 = tvg::cast<Shape>(basicMask->duplicate());
     REQUIRE(basicMask3);
 
-    auto basicShape4 = std::unique_ptr<Shape>(static_cast<Shape*>(basicShape->duplicate()));
+    auto basicShape4 = tvg::cast<Shape>(basicShape->duplicate());
     REQUIRE(basicShape4);
+    auto basicMask4 = tvg::cast<Shape>(basicMask->duplicate());
+    REQUIRE(basicMask4);
 
-    REQUIRE(basicShape->composite(move(basicMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicShape)) == Result::Success);
+    auto basicShape5 = tvg::cast<Shape>(basicShape->duplicate());
+    REQUIRE(basicShape5);
 
-    REQUIRE(basicShape2->composite(move(basicMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(basicShape2)) == Result::Success);
+    REQUIRE(basicShape->composite(std::move(basicMask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape)) == Result::Success);
 
-    REQUIRE(basicShape3->composite(move(basicMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(basicShape3)) == Result::Success);
+    REQUIRE(basicShape2->composite(std::move(basicMask2), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape2)) == Result::Success);
 
-    REQUIRE(canvas->push(move(basicShape4)) == Result::Success);
+    REQUIRE(basicShape3->composite(std::move(basicMask3), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape3)) == Result::Success);
+
+    REQUIRE(basicShape4->composite(std::move(basicMask4), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(basicShape4)) == Result::Success);
+
+    REQUIRE(canvas->push(std::move(basicShape5)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -483,14 +533,14 @@ TEST_CASE("Filling Draw", "[tvgSwEngine]")
     REQUIRE(shape3);
     auto shape4 = tvg::Shape::gen();
     REQUIRE(shape4);
-    REQUIRE(shape3->appendRect(0, 0, 50, 50, 0, 0) == Result::Success);
-    REQUIRE(shape4->appendRect(50, 0, 50, 50, 0, 0) == Result::Success);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
-    REQUIRE(canvas->push(move(shape3)) == Result::Success);
-    REQUIRE(canvas->push(move(shape4)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape3)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape4)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -533,14 +583,14 @@ TEST_CASE("Filling Opaque Draw", "[tvgSwEngine]")
     REQUIRE(shape3);
     auto shape4 = tvg::Shape::gen();
     REQUIRE(shape4);
-    REQUIRE(shape3->appendRect(0, 0, 50, 50, 0, 0) == Result::Success);
-    REQUIRE(shape4->appendRect(50, 0, 50, 50, 0, 0) == Result::Success);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
-    REQUIRE(canvas->push(move(shape3)) == Result::Success);
-    REQUIRE(canvas->push(move(shape4)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape3)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape4)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -588,19 +638,19 @@ TEST_CASE("Filling AlphaMask", "[tvgSwEngine]")
     REQUIRE(shape3);
     auto shape4 = tvg::Shape::gen();
     REQUIRE(shape4);
-    REQUIRE(shape3->appendRect(0, 0, 50, 50, 0, 0) == Result::Success);
-    REQUIRE(shape4->appendRect(50, 0, 50, 50, 0, 0) == Result::Success);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
     //Scene
     auto scene = tvg::Scene::gen();
     REQUIRE(scene);
-    REQUIRE(scene->push(move(shape3)) == Result::Success);
-    REQUIRE(scene->push(move(shape4)) == Result::Success);
-    REQUIRE(scene->composite(move(mask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -648,19 +698,79 @@ TEST_CASE("Filling InvAlphaMask", "[tvgSwEngine]")
     REQUIRE(shape3);
     auto shape4 = tvg::Shape::gen();
     REQUIRE(shape4);
-    REQUIRE(shape3->appendRect(0, 0, 50, 50, 0, 0) == Result::Success);
-    REQUIRE(shape4->appendRect(50, 0, 50, 50, 0, 0) == Result::Success);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
     //Scene
     auto scene = tvg::Scene::gen();
     REQUIRE(scene);
-    REQUIRE(scene->push(move(shape3)) == Result::Success);
-    REQUIRE(scene->push(move(shape4)) == Result::Success);
-    REQUIRE(scene->composite(move(mask), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
+
+    //Draw
+    REQUIRE(canvas->draw() == Result::Success);
+    REQUIRE(canvas->sync() == Result::Success);
+
+    REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
+}
+
+
+TEST_CASE("Filling LumaMask", "[tvgSwEngine]")
+{
+    REQUIRE(Initializer::init(CanvasEngine::Sw, 0) == Result::Success);
+
+    auto canvas = SwCanvas::gen();
+    REQUIRE(canvas);
+
+    uint32_t buffer[100*100];
+    REQUIRE(canvas->target(buffer, 100, 100, 100, SwCanvas::Colorspace::ABGR8888) == Result::Success);
+
+    //Fill
+    auto linearFill = LinearGradient::gen();
+    REQUIRE(linearFill);
+
+    auto radialFill = RadialGradient::gen();
+    REQUIRE(radialFill);
+
+    Fill::ColorStop cs[4] = {
+        {0.0f, 0, 0, 0, 0},
+        {0.2f, 50, 25, 50, 25},
+        {0.5f, 100, 100, 100, 125},
+        {1.0f, 255, 255, 255, 255}
+    };
+    REQUIRE(linearFill->colorStops(cs, 4) == Result::Success);
+    REQUIRE(radialFill->colorStops(cs, 4) == Result::Success);
+    REQUIRE(linearFill->linear(0.0f, 0.0f, 100.0f, 120.0f) == Result::Success);
+    REQUIRE(radialFill->radial(50.0f, 50.0f, 50.0f) == Result::Success);
+
+    //Mask
+    auto mask = tvg::Shape::gen();
+    REQUIRE(mask);
+    REQUIRE(mask->appendCircle(50, 50, 50, 50) == Result::Success);
+
+    //Filled Shapes
+    auto shape3 = tvg::Shape::gen();
+    REQUIRE(shape3);
+    auto shape4 = tvg::Shape::gen();
+    REQUIRE(shape4);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50) == Result::Success);
+
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
+
+    //Scene
+    auto scene = tvg::Scene::gen();
+    REQUIRE(scene);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -708,19 +818,19 @@ TEST_CASE("Filling ClipPath", "[tvgSwEngine]")
     REQUIRE(shape3);
     auto shape4 = tvg::Shape::gen();
     REQUIRE(shape4);
-    REQUIRE(shape3->appendRect(0, 0, 50, 50, 0, 0) == Result::Success);
-    REQUIRE(shape4->appendRect(50, 0, 50, 50, 0, 0) == Result::Success);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
     //Scene
     auto scene = tvg::Scene::gen();
     REQUIRE(scene);
-    REQUIRE(scene->push(move(shape3)) == Result::Success);
-    REQUIRE(scene->push(move(shape4)) == Result::Success);
-    REQUIRE(scene->composite(move(mask), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -766,11 +876,11 @@ TEST_CASE("RLE Filling Draw", "[tvgSwEngine]")
     REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
     REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
-    REQUIRE(canvas->push(move(shape3)) == Result::Success);
-    REQUIRE(canvas->push(move(shape4)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape3)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape4)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -816,11 +926,11 @@ TEST_CASE("RLE Filling Opaque Draw", "[tvgSwEngine]")
     REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
     REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
-    REQUIRE(canvas->push(move(shape3)) == Result::Success);
-    REQUIRE(canvas->push(move(shape4)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape3)) == Result::Success);
+    REQUIRE(canvas->push(std::move(shape4)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -871,16 +981,16 @@ TEST_CASE("RLE Filling AlphaMask", "[tvgSwEngine]")
     REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
     REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
     //Scene
     auto scene = tvg::Scene::gen();
     REQUIRE(scene);
-    REQUIRE(scene->push(move(shape3)) == Result::Success);
-    REQUIRE(scene->push(move(shape4)) == Result::Success);
-    REQUIRE(scene->composite(move(mask), tvg::CompositeMethod::AlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::AlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -931,16 +1041,136 @@ TEST_CASE("RLE Filling InvAlphaMask", "[tvgSwEngine]")
     REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
     REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
     //Scene
     auto scene = tvg::Scene::gen();
     REQUIRE(scene);
-    REQUIRE(scene->push(move(shape3)) == Result::Success);
-    REQUIRE(scene->push(move(shape4)) == Result::Success);
-    REQUIRE(scene->composite(move(mask), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::InvAlphaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
+
+    //Draw
+    REQUIRE(canvas->draw() == Result::Success);
+    REQUIRE(canvas->sync() == Result::Success);
+
+    REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
+}
+
+
+TEST_CASE("RLE Filling LumaMask", "[tvgSwEngine]")
+{
+    REQUIRE(Initializer::init(CanvasEngine::Sw, 0) == Result::Success);
+
+    auto canvas = SwCanvas::gen();
+    REQUIRE(canvas);
+
+    uint32_t buffer[100*100];
+    REQUIRE(canvas->target(buffer, 100, 100, 100, SwCanvas::Colorspace::ABGR8888) == Result::Success);
+
+    //Fill
+    auto linearFill = LinearGradient::gen();
+    REQUIRE(linearFill);
+
+    auto radialFill = RadialGradient::gen();
+    REQUIRE(radialFill);
+
+    Fill::ColorStop cs[4] = {
+        {0.0f, 0, 0, 0, 0},
+        {0.2f, 50, 25, 50, 25},
+        {0.5f, 100, 100, 100, 125},
+        {1.0f, 255, 255, 255, 255}
+    };
+    REQUIRE(linearFill->colorStops(cs, 4) == Result::Success);
+    REQUIRE(radialFill->colorStops(cs, 4) == Result::Success);
+    REQUIRE(linearFill->linear(0.0f, 0.0f, 100.0f, 120.0f) == Result::Success);
+    REQUIRE(radialFill->radial(50.0f, 50.0f, 50.0f) == Result::Success);
+
+    //Mask
+    auto mask = tvg::Shape::gen();
+    REQUIRE(mask);
+    REQUIRE(mask->appendCircle(50, 50, 50, 50) == Result::Success);
+
+    //Filled Shapes
+    auto shape3 = tvg::Shape::gen();
+    REQUIRE(shape3);
+    auto shape4 = tvg::Shape::gen();
+    REQUIRE(shape4);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
+
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
+
+    //Scene
+    auto scene = tvg::Scene::gen();
+    REQUIRE(scene);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::LumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
+
+    //Draw
+    REQUIRE(canvas->draw() == Result::Success);
+    REQUIRE(canvas->sync() == Result::Success);
+
+    REQUIRE(Initializer::term(CanvasEngine::Sw) == Result::Success);
+}
+
+
+TEST_CASE("RLE Filling InvLumaMask", "[tvgSwEngine]")
+{
+    REQUIRE(Initializer::init(CanvasEngine::Sw, 0) == Result::Success);
+
+    auto canvas = SwCanvas::gen();
+    REQUIRE(canvas);
+
+    uint32_t buffer[100*100];
+    REQUIRE(canvas->target(buffer, 100, 100, 100, SwCanvas::Colorspace::ABGR8888) == Result::Success);
+
+    //Fill
+    auto linearFill = LinearGradient::gen();
+    REQUIRE(linearFill);
+
+    auto radialFill = RadialGradient::gen();
+    REQUIRE(radialFill);
+
+    Fill::ColorStop cs[4] = {
+        {0.0f, 0, 0, 0, 0},
+        {0.2f, 50, 25, 50, 25},
+        {0.5f, 100, 100, 100, 125},
+        {1.0f, 255, 255, 255, 255}
+    };
+    REQUIRE(linearFill->colorStops(cs, 4) == Result::Success);
+    REQUIRE(radialFill->colorStops(cs, 4) == Result::Success);
+    REQUIRE(linearFill->linear(0.0f, 0.0f, 100.0f, 120.0f) == Result::Success);
+    REQUIRE(radialFill->radial(50.0f, 50.0f, 50.0f) == Result::Success);
+
+    //Mask
+    auto mask = tvg::Shape::gen();
+    REQUIRE(mask);
+    REQUIRE(mask->appendCircle(50, 50, 50, 50) == Result::Success);
+
+    //Filled Shapes
+    auto shape3 = tvg::Shape::gen();
+    REQUIRE(shape3);
+    auto shape4 = tvg::Shape::gen();
+    REQUIRE(shape4);
+    REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
+    REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
+
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
+
+    //Scene
+    auto scene = tvg::Scene::gen();
+    REQUIRE(scene);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::InvLumaMask) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);
@@ -991,16 +1221,16 @@ TEST_CASE("RLE Filling ClipPath", "[tvgSwEngine]")
     REQUIRE(shape3->appendRect(0, 0, 50, 50, 10, 10) == Result::Success);
     REQUIRE(shape4->appendRect(50, 0, 50, 50, 10, 10) == Result::Success);
 
-    REQUIRE(shape3->fill(move(linearFill)) == Result::Success);
-    REQUIRE(shape4->fill(move(radialFill)) == Result::Success);
+    REQUIRE(shape3->fill(std::move(linearFill)) == Result::Success);
+    REQUIRE(shape4->fill(std::move(radialFill)) == Result::Success);
 
     //Scene
     auto scene = tvg::Scene::gen();
     REQUIRE(scene);
-    REQUIRE(scene->push(move(shape3)) == Result::Success);
-    REQUIRE(scene->push(move(shape4)) == Result::Success);
-    REQUIRE(scene->composite(move(mask), tvg::CompositeMethod::ClipPath) == Result::Success);
-    REQUIRE(canvas->push(move(scene)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape3)) == Result::Success);
+    REQUIRE(scene->push(std::move(shape4)) == Result::Success);
+    REQUIRE(scene->composite(std::move(mask), tvg::CompositeMethod::ClipPath) == Result::Success);
+    REQUIRE(canvas->push(std::move(scene)) == Result::Success);
 
     //Draw
     REQUIRE(canvas->draw() == Result::Success);

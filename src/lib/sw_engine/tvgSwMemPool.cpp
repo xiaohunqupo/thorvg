@@ -40,8 +40,10 @@ SwOutline* mpoolReqOutline(SwMpool* mpool, unsigned idx)
 
 void mpoolRetOutline(SwMpool* mpool, unsigned idx)
 {
-    mpool->outline[idx].cntrsCnt = 0;
-    mpool->outline[idx].ptsCnt = 0;
+    mpool->outline[idx].pts.clear();
+    mpool->outline[idx].cntrs.clear();
+    mpool->outline[idx].types.clear();
+    mpool->outline[idx].closed.clear();
 }
 
 
@@ -53,23 +55,25 @@ SwOutline* mpoolReqStrokeOutline(SwMpool* mpool, unsigned idx)
 
 void mpoolRetStrokeOutline(SwMpool* mpool, unsigned idx)
 {
-    mpool->strokeOutline[idx].cntrsCnt = 0;
-    mpool->strokeOutline[idx].ptsCnt = 0;
+    mpool->strokeOutline[idx].pts.clear();
+    mpool->strokeOutline[idx].cntrs.clear();
+    mpool->strokeOutline[idx].types.clear();
+    mpool->strokeOutline[idx].closed.clear();
 }
 
 
 SwMpool* mpoolInit(unsigned threads)
 {
-    if (threads == 0) threads = 1;
+    auto allocSize = threads + 1;
 
     auto mpool = static_cast<SwMpool*>(calloc(sizeof(SwMpool), 1));
-    mpool->outline = static_cast<SwOutline*>(calloc(1, sizeof(SwOutline) * threads));
+    mpool->outline = static_cast<SwOutline*>(calloc(1, sizeof(SwOutline) * allocSize));
     if (!mpool->outline) goto err;
 
-    mpool->strokeOutline = static_cast<SwOutline*>(calloc(1, sizeof(SwOutline) * threads));
+    mpool->strokeOutline = static_cast<SwOutline*>(calloc(1, sizeof(SwOutline) * allocSize));
     if (!mpool->strokeOutline) goto err;
 
-    mpool->allocSize = threads;
+    mpool->allocSize = allocSize;
 
     return mpool;
 
@@ -93,42 +97,19 @@ bool mpoolClear(SwMpool* mpool)
     SwOutline* p;
 
     for (unsigned i = 0; i < mpool->allocSize; ++i) {
-
         //Outline
         p = &mpool->outline[i];
-
-        free(p->cntrs);
-        p->cntrs = nullptr;
-
-        free(p->pts);
-        p->pts = nullptr;
-
-        free(p->types);
-        p->types = nullptr;
-
-        free(p->closed);
-        p->closed = nullptr;
-
-        p->cntrsCnt = p->reservedCntrsCnt = 0;
-        p->ptsCnt = p->reservedPtsCnt = 0;
+        p->pts.reset();
+        p->cntrs.reset();
+        p->types.reset();
+        p->closed.reset();
 
         //StrokeOutline
         p = &mpool->strokeOutline[i];
-
-        free(p->cntrs);
-        p->cntrs = nullptr;
-
-        free(p->pts);
-        p->pts = nullptr;
-
-        free(p->types);
-        p->types = nullptr;
-
-        free(p->closed);
-        p->closed = nullptr;
-
-        p->cntrsCnt = p->reservedCntrsCnt = 0;
-        p->ptsCnt = p->reservedPtsCnt = 0;
+        p->pts.reset();
+        p->cntrs.reset();
+        p->types.reset();
+        p->closed.reset();
     }
 
     return true;

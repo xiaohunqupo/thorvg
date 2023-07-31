@@ -144,12 +144,12 @@ public:
         mErrorMsg = "None";
 
         auto saver = tvg::Saver::gen();
-        auto duplicate = unique_ptr<tvg::Picture>(static_cast<tvg::Picture*>(mPicture->duplicate()));
+        auto duplicate = tvg::cast<tvg::Picture>(mPicture->duplicate());
         if (!saver || !duplicate) {
             mErrorMsg = "Saving initialization failed";
             return false;
         }
-        if (saver->save(move(duplicate), "file.tvg", compress) != tvg::Result::Success) {
+        if (saver->save(std::move(duplicate), "file.tvg", compress) != tvg::Result::Success) {
             mErrorMsg = "Tvg saving failed";
             return false;
         }
@@ -180,7 +180,7 @@ public:
         Array<const Paint *> parents;
         const Paint* paint = findPaintById(mPicture, paintId, &parents);
         if (!paint) return val(typed_memory_view<float>(0, nullptr));
-        paint->bounds(&mBounds[0], &mBounds[1], &mBounds[2], &mBounds[3]);
+        paint->bounds(&mBounds[0], &mBounds[1], &mBounds[2], &mBounds[3], false);
 
         float points[8] = { //clockwise points
             mBounds[0], mBounds[1], //(x1, y1)
@@ -189,7 +189,7 @@ public:
             mBounds[0], mBounds[1] + mBounds[3], //(x1, y2)
         };
 
-        for (auto paint = parents.data; paint < (parents.data + parents.count); ++paint) {
+        for (auto paint = parents.data; paint < parents.end(); ++paint) {
             auto m = const_cast<Paint*>(*paint)->transform();
             for (int i = 0; i<8; i += 2) {
                 float x = points[i] * m.e11 + points[i+1] * m.e12 + m.e13;

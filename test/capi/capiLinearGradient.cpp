@@ -28,6 +28,12 @@ TEST_CASE("Linear Gradient Basic Create", "[capiLinearGradient]")
 {
     Tvg_Gradient *gradient = tvg_linear_gradient_new();
     REQUIRE(gradient);
+
+    Tvg_Identifier id = TVG_IDENTIFIER_UNDEF;
+    REQUIRE(tvg_gradient_get_identifier(gradient, &id) == TVG_RESULT_SUCCESS);
+    REQUIRE(id == TVG_IDENTIFIER_LINEAR_GRAD);
+    REQUIRE(id != TVG_IDENTIFIER_RADIAL_GRAD);
+
     REQUIRE(tvg_gradient_del(gradient) == TVG_RESULT_SUCCESS);
 }
 
@@ -138,6 +144,27 @@ TEST_CASE("Linear Gradient duplicate", "[capiLinearGradient]")
     REQUIRE(tvg_paint_del(shape) == TVG_RESULT_SUCCESS);
 }
 
+TEST_CASE("Linear Gradient identifier", "[capiLinearGradient]")
+{
+    Tvg_Gradient* grad = tvg_linear_gradient_new();
+    REQUIRE(grad);
+
+    Tvg_Gradient* grad_copy = tvg_gradient_duplicate(grad);
+    REQUIRE(grad_copy);
+
+    Tvg_Identifier id = TVG_IDENTIFIER_UNDEF;
+    Tvg_Identifier id_copy = TVG_IDENTIFIER_UNDEF;
+
+    REQUIRE(tvg_gradient_get_identifier(nullptr, &id) == TVG_RESULT_INVALID_ARGUMENT);
+    REQUIRE(tvg_gradient_get_identifier(grad, nullptr) == TVG_RESULT_INVALID_ARGUMENT);
+    REQUIRE(tvg_gradient_get_identifier(grad, &id) == TVG_RESULT_SUCCESS);
+    REQUIRE(tvg_gradient_get_identifier(grad_copy, &id_copy) == TVG_RESULT_SUCCESS);
+    REQUIRE(id_copy == id);
+
+    REQUIRE(tvg_gradient_del(grad_copy) == TVG_RESULT_SUCCESS);
+    REQUIRE(tvg_gradient_del(grad) == TVG_RESULT_SUCCESS);
+}
+
 TEST_CASE("Linear Gradient clear data", "[capiLinearGradient]")
 {
     Tvg_Paint *shape = tvg_shape_new();
@@ -162,7 +189,7 @@ TEST_CASE("Linear Gradient clear data", "[capiLinearGradient]")
 
     REQUIRE(tvg_gradient_set_color_stops(gradient, NULL, 0) == TVG_RESULT_SUCCESS);
     REQUIRE(tvg_gradient_get_color_stops(gradient, &color_stops_ret, &color_stops_count_ret) == TVG_RESULT_SUCCESS);
-    REQUIRE(color_stops_ret == NULL);
+    REQUIRE(color_stops_ret == nullptr);
     REQUIRE(color_stops_count_ret == 0);
 
     REQUIRE(tvg_gradient_del(gradient) == TVG_RESULT_SUCCESS);

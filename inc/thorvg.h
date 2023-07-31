@@ -18,28 +18,48 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <list>
 
-#ifdef TVG_BUILD
-    #if defined(_WIN32) && !defined(__clang__)
-        #define TVG_EXPORT __declspec(dllexport)
-        #define TVG_DEPRECATED __declspec(deprecated)
+#ifdef TVG_API
+    #undef TVG_API
+#endif
+
+#ifndef TVG_STATIC
+    #ifdef _WIN32
+        #if TVG_BUILD
+            #define TVG_API __declspec(dllexport)
+        #else
+            #define TVG_API __declspec(dllimport)
+        #endif
+    #elif (defined(__SUNPRO_C)  || defined(__SUNPRO_CC))
+        #define TVG_API __global
     #else
-        #define TVG_EXPORT __attribute__ ((visibility ("default")))
-        #define TVG_DEPRECATED __attribute__ ((__deprecated__))
+        #if (defined(__GNUC__) && __GNUC__ >= 4) || defined(__INTEL_COMPILER)
+            #define TVG_API __attribute__ ((visibility("default")))
+        #else
+            #define TVG_API
+        #endif
     #endif
 #else
-    #define TVG_EXPORT
+    #define TVG_API
+#endif
+
+#ifdef TVG_DEPRECATED
+    #undef TVG_DEPRECATED
+#endif
+
+#ifdef _WIN32
+    #define TVG_DEPRECATED __declspec(deprecated)
+#elif __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1)
+    #define TVG_DEPRECATED __attribute__ ((__deprecated__))
+#else
     #define TVG_DEPRECATED
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define _TVG_DECLARE_PRIVATE(A) \
-protected: \
     struct Impl; \
     Impl* pImpl; \
+protected: \
     A(const A&) = delete; \
     const A& operator=(const A&) = delete; \
     A()
@@ -48,23 +68,14 @@ protected: \
     A() = delete; \
     ~A() = delete
 
-#define _TVG_DECLARE_ACCESSOR() \
-    friend Canvas; \
-    friend Scene; \
-    friend Picture; \
-    friend Accessor; \
-    friend IteratorAccessor
-
+#define _TVG_DECLARE_ACCESSOR(A) \
+    friend A
 
 namespace tvg
 {
 
 class RenderMethod;
-class IteratorAccessor;
-class Scene;
-class Picture;
-class Canvas;
-class Accessor;
+class Animation;
 
 /**
  * @defgroup ThorVG ThorVG
@@ -87,6 +98,7 @@ enum class Result
     Unknown                ///< The value returned in all other cases.
 };
 
+
 /**
  * @brief Enumeration specifying the values of the path commands accepted by TVG.
  *
@@ -101,6 +113,7 @@ enum class PathCommand
     CubicTo    ///< Draws a cubic Bezier curve from the current point to the given point using two given control points and sets a new value of the current point. This command expects 3 points: the 1st control-point, the 2nd control-point, the end-point of the curve.
 };
 
+
 /**
  * @brief Enumeration determining the ending type of a stroke in the open sub-paths.
  */
@@ -110,6 +123,7 @@ enum class StrokeCap
     Round,      ///< The stroke is extended in both end-points of a sub-path by a half circle, with a radius equal to the half of a stroke width. For zero length sub-paths a full circle is rendered.
     Butt        ///< The stroke ends exactly at each of the two end-points of a sub-path. For zero length sub-paths no stroke is rendered.
 };
+
 
 /**
  * @brief Enumeration determining the style used at the corners of joined stroked path segments.
@@ -121,6 +135,7 @@ enum class StrokeJoin
     Miter      ///< The outer corner of the joined path segments is spiked. The spike is created by extension beyond the join point of the outer edges of the stroke until they intersect. In case the extension goes beyond the limit, the join style is converted to the Bevel style.
 };
 
+
 /**
  * @brief Enumeration specifying how to fill the area outside the gradient bounds.
  */
@@ -131,6 +146,7 @@ enum class FillSpread
     Repeat   ///< The gradient pattern is repeated continuously beyond the gradient area until the expected region is filled.
 };
 
+
 /**
  * @brief Enumeration specifying the algorithm used to establish which parts of the shape are treated as the inside of the shape.
  */
@@ -140,17 +156,56 @@ enum class FillRule
     EvenOdd      ///< A line from the point to a location outside the shape is drawn and its intersections with the path segments of the shape are counted. If the number of intersections is an odd number, the point is inside the shape.
 };
 
+
 /**
  * @brief Enumeration indicating the method used in the composition of two objects - the target and the source.
+ *
+ * Notation: S(Source), T(Target), SA(Source Alpha), TA(Target Alpha)
+ *
+ * @see Paint::composite()
  */
 enum class CompositeMethod
 {
-    None = 0,     ///< No composition is applied.
-    ClipPath,     ///< The intersection of the source and the target is determined and only the resulting pixels from the source are rendered.
-    AlphaMask,    ///< The pixels of the source and the target are alpha blended. As a result, only the part of the source, which alpha intersects with the target is visible.
-    InvAlphaMask, ///< The pixels of the source and the complement to the target's pixels are alpha blended. As a result, only the part of the source which alpha is not covered by the target is visible.
-    LumaMask      ///< @BETA_API The source pixels are converted to the grayscale (luma value) and alpha blended with the target. As a result, only the part of the source, which intersects with the target is visible.
+    None = 0,           ///< No composition is applied.
+    ClipPath,           ///< The intersection of the source and the target is determined and only the resulting pixels from the source are rendered.
+    AlphaMask,          ///< Alpha Masking using the compositing target's pixels as an alpha value.
+    InvAlphaMask,       ///< Alpha Masking using the complement to the compositing target's pixels as an alpha value.
+    LumaMask,           ///< Alpha Masking using the grayscale (0.2125R + 0.7154G + 0.0721*B) of the compositing target's pixels. @since 0.9
+    InvLumaMask,        ///< Alpha Masking using the grayscale (0.2125R + 0.7154G + 0.0721*B) of the complement to the compositing target's pixels. @BETA_API
+    AddMask,            ///< Combines the target and source objects pixels using target alpha. (T * TA) + (S * (255 - TA)) @BETA_API
+    SubtractMask,       ///< Subtracts the source color from the target color while considering their respective target alpha. (T * TA) - (S * (255 - TA)) @BETA_API
+    IntersectMask,      ///< Computes the result by taking the minimum value between the target alpha and the source alpha and multiplies it with the target color. (T * min(TA, SA)) @BETA_API
+    DifferenceMask      ///< Calculates the absolute difference between the target color and the source color multiplied by the complement of the target alpha. abs(T - S * (255 - TA)) @BETA_API
 };
+
+
+/**
+ * @brief Enumeration indicates the method used for blending paint. Please refer to the respective formulas for each method.
+ *
+ * Notation: S(source paint as the top layer), D(destination as the bottom layer), Sa(source paint alpha), Da(destination alpha)
+ *
+ * @see Paint::blend()
+ *
+ * @BETA_API
+ */
+enum class BlendMethod : uint8_t
+{
+    Normal = 0,        ///< Perform the alpha blending(default). S if (Sa == 255), otherwise (Sa * S) + (255 - Sa) * D
+    Add,               ///< Simply adds pixel values of one layer with the other. (S + D)
+    Screen,            ///< The values of the pixels in the two layers are inverted, multiplied, and then inverted again. (S + D) - (S * D)
+    Multiply,          ///< Takes the RGB channel values from 0 to 255 of each pixel in the top layer and multiples them with the values for the corresponding pixel from the bottom layer. (S * D)
+    Overlay,           ///< Combines Multiply and Screen blend modes. (2 * S * D) if (2 * D < Da), otherwise (Sa * Da) - 2 * (Da - S) * (Sa - D)
+    Difference,        ///< Subtracts the bottom layer from the top layer or the other way around, to always get a non-negative value. (S - D) if (S > D), otherwise (D - S)
+    Exclusion,         ///< The result is twice the product of the top and bottom layers, subtracted from their sum. s + d - (2 * s * d)
+    SrcOver,           ///< Replace the bottom layer with the top layer.
+    Darken,            ///< Creates a pixel that retains the smallest components of the top and bottom layer pixels. min(S, D)
+    Lighten,           ///< Only has the opposite action of Darken Only. max(S, D)
+    ColorDodge,        ///< Divides the bottom layer by the inverted top layer. D / (255 - S)
+    ColorBurn,         ///< Divides the inverted bottom layer by the top layer, and then inverts the result. 255 - (255 - D) / S
+    HardLight,         ///< The same as Overlay but with the color roles reversed. (2 * S * D) if (S < Sa), otherwise (Sa * Da) - 2 * (Da - S) * (Sa - D)
+    SoftLight          ///< The same as Overlay but with applying pure black or white does not result in pure black or white. (1 - 2 * S) * (D ^ 2) + (2 * S * D)
+};
+
 
 /**
  * @brief Enumeration specifying the engine type used for the graphics backend. For multiple backends bitwise operation is allowed.
@@ -222,7 +277,7 @@ struct Polygon
  * Paint represents such a graphical object and its behaviors such as duplication, transformation and composition.
  * TVG recommends the user to regard a paint as a set of volatile commands. They can prepare a Paint and then request a Canvas to run them.
  */
-class TVG_EXPORT Paint
+class TVG_API Paint
 {
 public:
     virtual ~Paint();
@@ -278,7 +333,7 @@ public:
      * The values of the matrix can be set by the transform() API, as well by the translate(),
      * scale() and rotate(). In case no transformation was applied, the identity matrix is returned.
      *
-     * @retval The augmented transformation matrix.
+     * @return The augmented transformation matrix.
      *
      * @since 0.4
      */
@@ -307,6 +362,21 @@ public:
     Result composite(std::unique_ptr<Paint> target, CompositeMethod method) noexcept;
 
     /**
+     * @brief Sets the blending method for the paint object.
+     *
+     * The blending feature allows you to combine colors to create visually appealing effects, including transparency, lighting, shading, and color mixing, among others.
+     * its process involves the combination of colors or images from the source paint object with the destination (the lower layer image) using blending operations.
+     * The blending operation is determined by the chosen @p BlendMethod, which specifies how the colors or images are combined.
+     *
+     * @param[in] method The blending method to be set.
+     *
+     * @return Result::Success when the blending method is successfully set.
+     *
+     * @BETA_API
+     */
+    Result blend(BlendMethod method) const noexcept;
+
+    /**
      * @brief Gets the bounding box of the paint object before any transformation.
      *
      * @param[out] x The x coordinate of the upper left corner of the object.
@@ -318,6 +388,7 @@ public:
      *
      * @note The bounding box doesn't indicate the final rendered region. It's the smallest rectangle that encloses the object.
      * @see Paint::bounds(float* x, float* y, float* w, float* h, bool transformed);
+     * @deprecated Use bounds(float* x, float* y, float* w, float* h, bool transformed) instead
      */
     TVG_DEPRECATED Result bounds(float* x, float* y, float* w, float* h) const noexcept;
 
@@ -366,6 +437,15 @@ public:
     CompositeMethod composite(const Paint** target) const noexcept;
 
     /**
+     * @brief Gets the blending method of the object.
+     *
+     * @return The blending method
+     *
+     * @BETA_API
+     */
+    BlendMethod blend() const noexcept;
+
+    /**
      * @brief Return the unique id value of the paint instance.
      *
      * This method can be called for checking the current concrete instance type.
@@ -374,7 +454,6 @@ public:
      */
     uint32_t identifier() const noexcept;
 
-    _TVG_DECLARE_ACCESSOR();
     _TVG_DECLARE_PRIVATE(Paint);
 };
 
@@ -390,7 +469,7 @@ public:
  * It specifies the gradient behavior in case the area defined by the gradient bounds
  * is smaller than the area to be filled.
  */
-class TVG_EXPORT Fill
+class TVG_API Fill
 {
 public:
     /**
@@ -494,7 +573,7 @@ public:
  * @note A Canvas behavior depends on the raster engine though the final content of the buffer is expected to be identical.
  * @warning The Paint objects belonging to one Canvas can't be shared among multiple Canvases.
  */
-class TVG_EXPORT Canvas
+class TVG_API Canvas
 {
 public:
     Canvas(RenderMethod*);
@@ -510,14 +589,25 @@ public:
      *
      * @return Result::Success when succeed.
      */
-    Result reserve(uint32_t n) noexcept;
+    TVG_DEPRECATED Result reserve(uint32_t n) noexcept;
+
+    /**
+     * @brief Returns the list of the paints that currently held by the Canvas.
+     *
+     * This function provides the list of paint nodes, allowing users a direct opportunity to modify the scene tree.
+     *
+     * @warning  Please avoid accessing the paints during Canvas update/draw. You can access them after calling sync().
+     * @see Canvas::sync()
+     *
+     * @BETA_API
+     */
+    std::list<Paint*>& paints() noexcept;
 
     /**
      * @brief Passes drawing elements to the Canvas using Paint objects.
      *
      * Only pushed paints in the canvas will be drawing targets.
      * They are retained by the canvas until you call Canvas::clear().
-     * If you know the number of the pushed objects in advance, please call Canvas::reserve().
      *
      * @param[in] paint A Paint object to be drawn.
      *
@@ -526,7 +616,7 @@ public:
      * @retval Result::InsufficientCondition An internal error.
      *
      * @note The rendering order of the paints is the same as the order as they were pushed into the canvas. Consider sorting the paints before pushing them if you intend to use layering.
-     * @see Canvas::reserve()
+     * @see Canvas::paints()
      * @see Canvas::clear()
      */
     virtual Result push(std::unique_ptr<Paint> paint) noexcept;
@@ -540,6 +630,8 @@ public:
      * @return Result::Success when succeed, Result::InsufficientCondition otherwise.
      *
      * @warning If you don't free the paints they become dangled. They are supposed to be reused, otherwise you are responsible for their lives. Thus please use the @p free argument only when you know how it works, otherwise it's not recommended.
+     * @see Canvas::push()
+     * @see Canvas::paints()
      */
     virtual Result clear(bool free = true) noexcept;
 
@@ -590,7 +682,7 @@ public:
  * Besides the APIs inherited from the Fill class, it enables setting and getting the linear gradient bounds.
  * The behavior outside the gradient bounds depends on the value specified in the spread API.
  */
-class TVG_EXPORT LinearGradient final : public Fill
+class TVG_API LinearGradient final : public Fill
 {
 public:
     ~LinearGradient();
@@ -655,7 +747,7 @@ public:
  * @brief A class representing the radial gradient fill of the Shape object.
  *
  */
-class TVG_EXPORT RadialGradient final : public Fill
+class TVG_API RadialGradient final : public Fill
 {
 public:
     ~RadialGradient();
@@ -718,7 +810,7 @@ public:
  * The stroke of Shape is an optional property in case the Shape needs to be represented with/without the outline borders.
  * It's efficient since the shape path and the stroking path can be shared with each other. It's also convenient when controlling both in one context.
  */
-class TVG_EXPORT Shape final : public Paint
+class TVG_API Shape final : public Paint
 {
 public:
     ~Shape();
@@ -814,7 +906,7 @@ public:
      *
      * @note For @p rx and @p ry greater than or equal to the half of @p w and the half of @p h, respectively, the shape become an ellipse.
      */
-    Result appendRect(float x, float y, float w, float h, float rx, float ry) noexcept;
+    Result appendRect(float x, float y, float w, float h, float rx = 0, float ry = 0) noexcept;
 
     /**
      * @brief Appends an ellipse to the path.
@@ -890,7 +982,7 @@ public:
      *
      * @return Result::Success when succeed, Result::FailedAllocation otherwise.
      */
-    Result stroke(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
+    Result stroke(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept;
 
     /**
      * @brief Sets the gradient fill of the stroke for all of the figures from the path.
@@ -938,6 +1030,18 @@ public:
      */
     Result stroke(StrokeJoin join) noexcept;
 
+
+    /**
+     * @brief Sets the stroke miterlimit.
+     *
+     * @param[in] miterlimit The miterlimit imposes a limit on the extent of the stroke join, when the @c StrokeJoin::Miter join style is set. The default value is 4.
+     *
+     * @return Result::Success when succeed, Result::NonSupport unsupported value, Result::FailedAllocation otherwise.
+     * 
+     * @BETA_API
+     */
+    Result strokeMiterlimit(float miterlimit) noexcept;
+
     /**
      * @brief Sets the solid color for all of the figures from the path.
      *
@@ -953,7 +1057,7 @@ public:
      * @note Either a solid color or a gradient fill is applied, depending on what was set as last.
      * @note ClipPath won't use the fill values. (see: enum class CompositeMethod::ClipPath)
      */
-    Result fill(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
+    Result fill(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept;
 
     /**
      * @brief Sets the gradient fill for all of the figures from the path.
@@ -976,6 +1080,19 @@ public:
      * @return Result::Success when succeed.
      */
     Result fill(FillRule r) noexcept;
+
+
+    /**
+     * @brief Sets the rendering order of the stroke and the fill.
+     *
+     * @param[in] strokeFirst If @c true the stroke is rendered before the fill, otherwise the stroke is rendered as the second one (the default option).
+     *
+     * @return Result::Success when succeed, Result::FailedAllocation otherwise.
+     *
+     * @since 0.10
+     */
+    Result order(bool strokeFirst) noexcept;
+
 
     /**
      * @brief Gets the commands data of the path.
@@ -1012,7 +1129,7 @@ public:
      *
      * @return Result::Success when succeed.
      */
-    Result fillColor(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a) const noexcept;
+    Result fillColor(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a = nullptr) const noexcept;
 
     /**
      * @brief Gets the fill rule value.
@@ -1038,7 +1155,7 @@ public:
      *
      * @return Result::Success when succeed, Result::InsufficientCondition otherwise.
      */
-    Result strokeColor(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a) const noexcept;
+    Result strokeColor(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a = nullptr) const noexcept;
 
     /**
      * @brief Gets the pointer to the gradient fill of the stroke.
@@ -1071,6 +1188,15 @@ public:
     StrokeJoin strokeJoin() const noexcept;
 
     /**
+     * @brief Gets the stroke miterlimit.
+     *
+     * @return The stroke miterlimit value when succeed, 4 if no stroke was set.
+     *
+     * @BETA_API
+     */
+    float strokeMiterlimit() const noexcept;
+
+    /**
      * @brief Creates a new Shape object.
      *
      * @return A new Shape object.
@@ -1093,12 +1219,13 @@ public:
 /**
  * @class Picture
  *
- * @brief A class representing an image read in one of the supported formats: raw, svg, png, jpg and etc.
+ * @brief A class representing an image read in one of the supported formats: raw, svg, png, jpg, lottie(json) and etc.
  * Besides the methods inherited from the Paint, it provides methods to load & draw images on the canvas.
  *
  * @note Supported formats are depended on the available TVG loaders.
+ * @note See Animation class if the picture data is animatable.
  */
-class TVG_EXPORT Picture final : public Paint
+class TVG_API Picture final : public Paint
 {
 public:
     ~Picture();
@@ -1192,9 +1319,10 @@ public:
     /**
      * @brief Loads a raw data from a memory block with a given size.
      *
-     * @warning Please do not use it, this API is not official one. It could be modified in the next version.
+     * @retval Result::Success When succeed, Result::InsufficientCondition otherwise.
+     * @retval Result::FailedAllocation An internal error possibly with memory allocation.
      *
-     * @BETA_API
+     * @since 0.9
      */
     Result load(uint32_t* data, uint32_t w, uint32_t h, bool copy) noexcept;
 
@@ -1220,7 +1348,7 @@ public:
      *
      * @BETA_API
      */
-    Result mesh(const Polygon* triangles, const uint32_t triangleCnt) noexcept;
+    Result mesh(const Polygon* triangles, uint32_t triangleCnt) noexcept;
 
     /**
      * @brief Return the number of triangles in the mesh, and optionally get a pointer to the array of triangles in the mesh.
@@ -1235,15 +1363,6 @@ public:
      * @BETA_API
      */
     uint32_t mesh(const Polygon** triangles) const noexcept;
-
-    /**
-     * @brief Gets the position and the size of the loaded SVG picture.
-     *
-     * @warning Please do not use it, this API is not official one. It could be modified in the next version.
-     *
-     * @BETA_API
-     */
-    Result viewbox(float* x, float* y, float* w, float* h) const noexcept;
 
     /**
      * @brief Creates a new Picture object.
@@ -1261,6 +1380,7 @@ public:
      */
     static uint32_t identifier() noexcept;
 
+    _TVG_DECLARE_ACCESSOR(Animation);
     _TVG_DECLARE_PRIVATE(Picture);
 };
 
@@ -1276,7 +1396,7 @@ public:
  * As a group, the scene can be transformed, made translucent and composited with other target paints,
  * its children will be affected by the scene world.
  */
-class TVG_EXPORT Scene final : public Paint
+class TVG_API Scene final : public Paint
 {
 public:
     ~Scene();
@@ -1286,14 +1406,14 @@ public:
      *
      * Only the paints pushed into the scene will be the drawn targets.
      * The paints are retained by the scene until Scene::clear() is called.
-     * If you know the number of the pushed objects in advance, please call Scene::reserve().
      *
      * @param[in] paint A Paint object to be drawn.
      *
      * @return Result::Success when succeed, Result::MemoryCorruption otherwise.
      *
      * @note The rendering order of the paints is the same as the order as they were pushed. Consider sorting the paints before pushing them if you intend to use layering.
-     * @see Scene::reserve()
+     * @see Scene::paints()
+     * @see Scene::clear()
      */
     Result push(std::unique_ptr<Paint> paint) noexcept;
 
@@ -1307,7 +1427,21 @@ public:
      *
      * @return Result::Success when succeed, Result::FailedAllocation otherwise.
      */
-    Result reserve(uint32_t size) noexcept;
+    TVG_DEPRECATED Result reserve(uint32_t size) noexcept;
+
+    /**
+     * @brief Returns the list of the paints that currently held by the Scene.
+     *
+     * This function provides the list of paint nodes, allowing users a direct opportunity to modify the scene tree.
+     *
+     * @warning  Please avoid accessing the paints during Scene update/draw. You can access them after calling Canvas::sync().
+     * @see Canvas::sync()
+     * @see Scene::push()
+     * @see Scene::clear()
+     *
+     * @BETA_API
+     */
+    std::list<Paint*>& paints() noexcept;
 
     /**
      * @brief Sets the total number of the paints pushed into the scene to be zero.
@@ -1348,7 +1482,7 @@ public:
  *
  * @brief A class for the rendering graphical elements with a software raster engine.
  */
-class TVG_EXPORT SwCanvas final : public Canvas
+class TVG_API SwCanvas final : public Canvas
 {
 public:
     ~SwCanvas();
@@ -1358,10 +1492,10 @@ public:
      */
     enum Colorspace
     {
-        ABGR8888 = 0,      ///< The channels are joined in the order: alpha, blue, green, red. Colors are alpha-premultiplied.
-        ARGB8888,          ///< The channels are joined in the order: alpha, red, green, blue. Colors are alpha-premultiplied.
-        ABGR8888_STRAIGHT, ///< @BETA_API The channels are joined in the order: alpha, blue, green, red. Colors are un-alpha-premultiplied.
-        ARGB8888_STRAIGHT, ///< @BETA_API The channels are joined in the order: alpha, red, green, blue. Colors are un-alpha-premultiplied.
+        ABGR8888 = 0,      ///< The channels are joined in the order: alpha, blue, green, red. Colors are alpha-premultiplied. (a << 24 | b << 16 | g << 8 | r)
+        ARGB8888,          ///< The channels are joined in the order: alpha, red, green, blue. Colors are alpha-premultiplied. (a << 24 | r << 16 | g << 8 | b)
+        ABGR8888S,         ///< @BETA_API The channels are joined in the order: alpha, blue, green, red. Colors are un-alpha-premultiplied.
+        ARGB8888S,         ///< @BETA_API The channels are joined in the order: alpha, red, green, blue. Colors are un-alpha-premultiplied.
     };
 
     /**
@@ -1439,7 +1573,7 @@ public:
  *
  * @BETA_API
  */
-class TVG_EXPORT GlCanvas final : public Canvas
+class TVG_API GlCanvas final : public Canvas
 {
 public:
     ~GlCanvas();
@@ -1471,7 +1605,7 @@ public:
  *
  * @brief A class that enables initialization and termination of the TVG engines.
  */
-class TVG_EXPORT Initializer final
+class TVG_API Initializer final
 {
 public:
     /**
@@ -1517,6 +1651,101 @@ public:
 
 
 /**
+ * @class Animation
+ *
+ * @brief The Animation class enables manipulation of animatable images.
+ *
+ * This class supports the display and control of animation frames.
+ *
+ * @BETA_API
+ */
+
+class TVG_API Animation
+{
+public:
+    ~Animation();
+
+    /**
+     * @brief Specifies the current frame in the animation.
+     *
+     * @param[in] no The index of the animation frame to be displayed. The index should be less than the totalFrame().
+     *
+     * @retval Result::Success Successfully set the frame.
+     * @retval Result::InsufficientCondition No animatable data loaded from the Picture.
+     * @retval Result::NonSupport The Picture data does not support animations.
+     *
+     * @see totalFrame()
+     *
+     * @BETA_API
+     */
+    Result frame(uint32_t no) noexcept;
+
+    /**
+     * @brief Retrieves a picture instance associated with this animation instance.
+     *
+     * This function provides access to the picture instance that can be used to load animation formats, such as Lottie(json).
+     * After setting up the picture, it can be pushed to the designated canvas, enabling control over animation frames
+     * with this Animation instance.
+     *
+     * @return A picture instance that is tied to this animation.
+     *
+     * @warning The picture instance is owned by Animation. It should not be deleted manually.
+     *
+     * @BETA_API
+     */
+    Picture* picture() const noexcept;
+
+    /**
+     * @brief Retrieves the current frame number of the animation.
+     *
+     * @return The current frame number of the animation, between 0 and totalFrame() - 1.
+     *
+     * @note If the Picture is not properly configured, this function will return 0.
+     *
+     * @see Animation::frame(uint32_t no)
+     * @see Animation::totalFrame()
+     *
+     * @BETA_API
+     */
+    uint32_t curFrame() const noexcept;
+
+    /**
+     * @brief Retrieves the total number of frames in the animation.
+     *
+     * @return The total number of frames in the animation.
+     *
+     * @note Frame numbering starts from 0.
+     * @note If the Picture is not properly configured, this function will return 0.
+     *
+     * @BETA_API
+     */
+    uint32_t totalFrame() const noexcept;
+
+    /**
+     * @brief Retrieves the duration of the animation in seconds.
+     *
+     * @return The duration of the animation in seconds.
+     *
+     * @note If the Picture is not properly configured, this function will return 0.
+     *
+     * @BETA_API
+     */
+    float duration() const noexcept;
+
+    /**
+     * @brief Creates a new Animation object.
+     *
+     * @return A new Animation object.
+     *
+     * @BETA_API
+     */
+    static std::unique_ptr<Animation> gen() noexcept;
+
+    _TVG_DECLARE_PRIVATE(Animation);
+};
+
+
+/**
  * @class Saver
  *
  * @brief A class for exporting a paint object into a specified file, from which to recover the paint data later.
@@ -1533,7 +1762,7 @@ public:
  *
  * @since 0.5
  */
-class TVG_EXPORT Saver final
+class TVG_API Saver final
 {
 public:
     ~Saver();
@@ -1601,9 +1830,9 @@ public:
  *
  * @warning We strongly warn you not to change the paints of a scene unless you really know the design-structure.
  *
- * @BETA_API
+ * @since 0.10
  */
-class TVG_EXPORT Accessor final
+class TVG_API Accessor final
 {
 public:
     ~Accessor();
@@ -1617,8 +1846,6 @@ public:
      * @return Return the given @p picture instance.
      *
      * @note The bitmap based picture might not have the scene-tree.
-     *
-     * @BETA_API
      */
     std::unique_ptr<Picture> set(std::unique_ptr<Picture> picture, std::function<bool(const Paint* paint)> func) noexcept;
 
@@ -1626,20 +1853,39 @@ public:
      * @brief Creates a new Accessor object.
      *
      * @return A new Accessor object.
-     *
-     * @BETA_API
      */
     static std::unique_ptr<Accessor> gen() noexcept;
 
     _TVG_DECLARE_PRIVATE(Accessor);
 };
 
+
+/**
+ * @brief The cast() function is a utility function used to cast a 'Paint' to type 'T'.
+ *
+ * @BETA_API
+ */
+template<typename T>
+std::unique_ptr<T> cast(Paint* paint)
+{
+    return std::unique_ptr<T>(static_cast<T*>(paint));
+}
+
+
+/**
+ * @brief The cast() function is a utility function used to cast a 'Fill' to type 'T'.
+ *
+ * @BETA_API
+ */
+template<typename T>
+std::unique_ptr<T> cast(Fill* fill)
+{
+    return std::unique_ptr<T>(static_cast<T*>(fill));
+}
+
+
 /** @}*/
 
 } //namespace
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif //_THORVG_H_

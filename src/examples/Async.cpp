@@ -53,7 +53,7 @@ bool tvgUpdateCmds(tvg::Canvas* canvas)
         float w = 1 + rand() % (int)(WIDTH * 1.3 / 2);
         float h = 1 + rand() %  (int)(HEIGHT * 1.3 / 2);
 
-        shape->appendRect(x, y, w, h, 0, 0);
+        shape->appendRect(x, y, w, h);
 
         //LinearGradient
         auto fill = tvg::LinearGradient::gen();
@@ -66,9 +66,9 @@ bool tvgUpdateCmds(tvg::Canvas* canvas)
         colorStops[2] = {2, uint8_t(rand() % 255), uint8_t(rand() % 255), uint8_t(rand() % 255), 255};
 
         fill->colorStops(colorStops, 3);
-        shape->fill(move(fill));
+        shape->fill(std::move(fill));
 
-        if (canvas->push(move(shape)) != tvg::Result::Success) {
+        if (canvas->push(std::move(shape)) != tvg::Result::Success) {
             //Did you call clear()? Make it sure if canvas is on rendering
             break;
         }

@@ -98,6 +98,8 @@ public:
             picture->size(&fw, &fh);
             w = static_cast<uint32_t>(fw);
             h = static_cast<uint32_t>(fh);
+            if (fw > w) w++;
+            if (fh > h) h++;
 
             if (w * h > SIZE_8K) {
                 float scale = fw / fh;
@@ -109,10 +111,11 @@ public:
                     w = static_cast<uint32_t>(h * scale);
                 }
                 cout << "Warning: The SVG width and/or height values exceed the 8k resolution. "
-                        "To avoid the heap overflow, the conversion to the PNG file made in " << WIDTH_8K << " x " << HEIGHT_8K << " resolution." << endl;
+                        "To avoid the heap overflow, the conversion to the PNG file made in " << w << " x " << h << " resolution." << endl;
+                picture->size(static_cast<float>(w), static_cast<float>(h));
             }
         } else {
-            picture->size(w, h);
+            picture->size(static_cast<float>(w), static_cast<float>(h));
         }
 
         //Buffer
@@ -122,7 +125,7 @@ public:
             return 1;
         }
 
-        if (canvas->target(buffer, w, w, h, tvg::SwCanvas::ARGB8888_STRAIGHT) != tvg::Result::Success) {
+        if (canvas->target(buffer, w, w, h, tvg::SwCanvas::ARGB8888S) != tvg::Result::Success) {
             cout << "Error: Canvas target failure" << endl;
             return 1;
         }
@@ -134,14 +137,14 @@ public:
             uint8_t b = (uint8_t)((bgColor & 0x0000ff));
 
             auto shape = tvg::Shape::gen();
-            shape->appendRect(0, 0, w, h, 0, 0);
-            shape->fill(r, g, b, 255);
+            shape->appendRect(0, 0, static_cast<float>(w), static_cast<float>(h), 0, 0);
+            shape->fill(r, g, b);
 
-            if (canvas->push(move(shape)) != tvg::Result::Success) return 1;
+            if (canvas->push(std::move(shape)) != tvg::Result::Success) return 1;
         }
 
         //Drawing
-        canvas->push(move(picture));
+        canvas->push(std::move(picture));
         canvas->draw();
         canvas->sync();
 

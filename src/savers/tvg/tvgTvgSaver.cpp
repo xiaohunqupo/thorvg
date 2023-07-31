@@ -20,12 +20,12 @@
  * SOFTWARE.
  */
 
-#include "tvgMath.h"
+#include <cstring>
+
 #include "tvgSaveModule.h"
 #include "tvgTvgSaver.h"
 #include "tvgLzw.h"
-
-#include <cstring>
+#include "tvgShapeImpl.h"
 
 #ifdef _WIN32
     #include <malloc.h>
@@ -51,6 +51,8 @@ static FILE* _fopen(const char* filename, const char* mode)
 
 #define SIZE(A) sizeof(A)
 
+#define P(A) A->pImpl
+
 /************************************************************************/
 /* Internal Class Implementation                                        */
 /************************************************************************/
@@ -75,7 +77,10 @@ static bool _merge(Shape* from, Shape* to)
     from->fillColor(&r, &g, &b, &a);
     to->fillColor(&r2, &g2, &b2, &a2);
 
-    if (r != r2 || g != g2 || b != b2 || a != a2) return false;
+    if (r != r2 || g != g2 || b != b2 || a != a2 || a < 255) return false;
+
+    auto fromRule = from->fillRule();
+    if (fromRule == FillRule::EvenOdd || fromRule != to->fillRule()) return false;
 
     //composition
     if (from->composite(nullptr) != CompositeMethod::None) return false;
@@ -88,13 +93,11 @@ static bool _merge(Shape* from, Shape* to)
     auto t1 = from->transform();
     auto t2 = to->transform();
 
-    if (!mathEqual(t1.e11, t2.e11) || !mathEqual(t1.e12, t2.e12) || !mathEqual(t1.e13, t2.e13) ||
-        !mathEqual(t1.e21, t2.e21) || !mathEqual(t1.e22, t2.e22) || !mathEqual(t1.e23, t2.e23) ||
-        !mathEqual(t1.e31, t2.e31) || !mathEqual(t1.e32, t2.e32) || !mathEqual(t1.e33, t2.e33)) {
-       return false;
-    }
+    if (!mathEqual(t1, t2)) return false;
 
     //stroke
+    if (P(from)->strokeFirst() != P(to)->strokeFirst()) return false;
+
     r = g = b = a = r2 = g2 = b2 = a2 = 0;
 
     from->strokeColor(&r, &g, &b, &a);
@@ -111,6 +114,8 @@ static bool _merge(Shape* from, Shape* to)
     if (from->strokeJoin() != to->strokeJoin()) return false;
     if (from->strokeDash(nullptr) > 0 || to->strokeDash(nullptr) > 0) return false;
     if (from->strokeFill() || to->strokeFill()) return false;
+
+    if (fabsf(from->strokeMiterlimit() - to->strokeMiterlimit()) > FLT_EPSILON) return false;
 
     //fill rule
     if (from->fillRule() != to->fillRule()) return false;
@@ -170,7 +175,7 @@ bool TvgSaver::saveEncoding(const std::string& path)
     memcpy(uncompressed, &compressedSizeBits, TVG_HEADER_COMPRESSED_SIZE_BITS);
 
     //Good optimization, flush to file.
-    auto fp = _fopen(path.c_str(), "w+");
+    auto fp = _fopen(path.c_str(), "wb+");
     if (!fp) goto fail;
 
     //write header
@@ -193,7 +198,7 @@ fail:
 
 bool TvgSaver::flushTo(const std::string& path)
 {
-    auto fp = _fopen(path.c_str(), "w+");
+    auto fp = _fopen(path.c_str(), "wb+");
     if (!fp) return false;
 
     if (fwrite(buffer.data, SIZE(uint8_t), buffer.count, fp) == 0) {
@@ -214,7 +219,7 @@ bool TvgSaver::writeHeader()
     buffer.grow(headerSize);
 
     //1. Signature
-    auto ptr = buffer.ptr();
+    auto ptr = buffer.end();
     memcpy(ptr, TVG_HEADER_SIGNATURE, TVG_HEADER_SIGNATURE_LENGTH);
     ptr += TVG_HEADER_SIGNATURE_LENGTH;
 
@@ -239,7 +244,7 @@ bool TvgSaver::writeHeader()
 void TvgSaver::writeTag(TvgBinTag tag)
 {
     buffer.grow(SIZE(TvgBinTag));
-    memcpy(buffer.ptr(), &tag, SIZE(TvgBinTag));
+    memcpy(buffer.end(), &tag, SIZE(TvgBinTag));
     buffer.count += SIZE(TvgBinTag);
 }
 
@@ -247,14 +252,14 @@ void TvgSaver::writeTag(TvgBinTag tag)
 void TvgSaver::writeCount(TvgBinCounter cnt)
 {
     buffer.grow(SIZE(TvgBinCounter));
-    memcpy(buffer.ptr(), &cnt, SIZE(TvgBinCounter));
+    memcpy(buffer.end(), &cnt, SIZE(TvgBinCounter));
     buffer.count += SIZE(TvgBinCounter);
 }
 
 
 void TvgSaver::writeReservedCount(TvgBinCounter cnt)
 {
-    memcpy(buffer.ptr() - cnt - SIZE(TvgBinCounter), &cnt, SIZE(TvgBinCounter));
+    memcpy(buffer.end() - cnt - SIZE(TvgBinCounter), &cnt, SIZE(TvgBinCounter));
 }
 
 
@@ -268,7 +273,7 @@ void TvgSaver::reserveCount()
 TvgBinCounter TvgSaver::writeData(const void* data, TvgBinCounter cnt)
 {
     buffer.grow(cnt);
-    memcpy(buffer.ptr(), data, cnt);
+    memcpy(buffer.end(), data, cnt);
     buffer.count += cnt;
 
     return cnt;
@@ -281,7 +286,7 @@ TvgBinCounter TvgSaver::writeTagProperty(TvgBinTag tag, TvgBinCounter cnt, const
 
     buffer.grow(growCnt);
 
-    auto ptr = buffer.ptr();
+    auto ptr = buffer.end();
 
     *ptr = tag;
     ++ptr;
@@ -348,7 +353,7 @@ TvgBinCounter TvgSaver::serializeChild(const Paint* parent, const Paint* child, 
     }
 
     //propagate composition
-    if (compTarget) const_cast<Paint*>(child)->composite(unique_ptr<Paint>(compTarget->duplicate()), compMethod);
+    if (compTarget) const_cast<Paint*>(child)->composite(cast<Paint>(compTarget->duplicate()), compMethod);
 
     return serialize(child, transform);
 }
@@ -450,6 +455,10 @@ TvgBinCounter TvgSaver::serializeStroke(const Shape* shape, const Matrix* pTrans
     if (auto flag = static_cast<TvgBinFlag>(shape->strokeJoin()))
         cnt += writeTagProperty(TVG_TAG_SHAPE_STROKE_JOIN, SIZE(TvgBinFlag), &flag);
 
+    //order
+    if (auto flag = static_cast<TvgBinFlag>(P(shape)->strokeFirst()))
+        writeTagProperty(TVG_TAG_SHAPE_STROKE_ORDER, SIZE(TvgBinFlag), &flag);
+
     //fill
     if (auto fill = shape->strokeFill()) {
         cnt += serializeFill(fill, TVG_TAG_SHAPE_STROKE_FILL, (preTransform ? pTransform : nullptr));
@@ -471,6 +480,12 @@ TvgBinCounter TvgSaver::serializeStroke(const Shape* shape, const Matrix* pTrans
         cnt += writeData(&dashCnt, dashCntSize);
         cnt += writeData(dashPattern, dashPtrnSize);
         cnt += SIZE(TvgBinTag) + SIZE(TvgBinCounter);
+    }
+
+    //miterlimit (the default value is 4)
+    auto miterlimit = shape->strokeMiterlimit();
+    if (fabsf(miterlimit - 4.0f) > FLT_EPSILON) {
+        cnt += writeTagProperty(TVG_TAG_SHAPE_STROKE_MITERLIMIT, SIZE(miterlimit), &miterlimit);
     }
 
     writeReservedCount(cnt);
@@ -663,9 +678,9 @@ TvgBinCounter TvgSaver::serializeChildren(Iterator* it, const Matrix* pTransform
     while (auto child = it->next()) {
         if (child->identifier() == TVG_CLASS_ID_SHAPE) {
             //only dosable if the previous child is a shape.
-            auto target = children.ptr() - 1;
-            if ((*target)->identifier() == TVG_CLASS_ID_SHAPE) {
-                if (_merge((Shape*)child, (Shape*)*target)) {
+            auto target = children.last();
+            if (target->identifier() == TVG_CLASS_ID_SHAPE) {
+                if (_merge((Shape*)child, (Shape*)target)) {
                     continue;
                 }
             }
@@ -673,6 +688,7 @@ TvgBinCounter TvgSaver::serializeChildren(Iterator* it, const Matrix* pTransform
         children.push(child);
     }
 
+    //TODO: Keep this for the compatibility, Remove in TVG 1.0 release
     //The children of a reserved scene
     if (reserved && children.count > 1) {
         cnt += writeTagProperty(TVG_TAG_SCENE_RESERVEDCNT, SIZE(children.count), &children.count);

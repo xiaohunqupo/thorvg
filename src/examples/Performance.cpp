@@ -35,12 +35,18 @@ void tvgDrawCmds(tvg::Canvas* canvas)
 {
     if (!canvas) return;
 
-    auto picture = tvg::Picture::gen();
+    auto mask = tvg::Shape::gen();
+    mask->appendCircle(WIDTH/2, HEIGHT/2, WIDTH/2, HEIGHT/2);    
+    mask->fill(255, 255, 255);
+    //Use the opacity for a half-translucent mask.
+    mask->opacity(125);
 
+    auto picture = tvg::Picture::gen();
     picture->load(EXAMPLE_DIR"/tiger.svg");
     picture->size(WIDTH, HEIGHT);
+    picture->composite(std::move(mask), tvg::CompositeMethod::AlphaMask);
     pPicture = picture.get();
-    canvas->push(move(picture));
+    canvas->push(std::move(picture));
 }
 
 void tvgUpdateCmds(tvg::Canvas* canvas, float progress)
@@ -174,10 +180,10 @@ int main(int argc, char **argv)
         Elm_Transit *transit = elm_transit_add();
 
         if (tvgEngine == tvg::CanvasEngine::Sw) {
-            auto view = createSwView();
+            auto view = createSwView(1024, 1024);
             elm_transit_effect_add(transit, transitSwCb, view, nullptr);
         } else {
-            auto view = createGlView();
+            auto view = createGlView(1024, 1024);
             elm_transit_effect_add(transit, transitGlCb, view, nullptr);
         }
 
